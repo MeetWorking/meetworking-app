@@ -82,6 +82,8 @@ passport.use(new LinkedInStrategy({
 // ----------------------------------------------------------------------------
 var routes = require('./routes/index')
 var users = require('./routes/users')
+var events = require('/routes/events')
+var specs = require('/routes/specs')
 
 var app = express()
 
@@ -100,6 +102,8 @@ app.use('/spec', express.static(path.join(__dirname, 'spec')))
 
 app.use('/', routes)
 app.use('/users', users)
+app.use('/events', events)
+app.use('/specs', specs)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
