@@ -3,8 +3,8 @@ var router = express.Router()
 
 /* GET landing page. */
 router.get('/', function (req, res, next) {
-  if ('user') { // Determine if user is currently logged in
-    res.redirect('/users/dashboard', { title: 'Dashboard' })
+  if (req.user) { // Determine if user is currently logged in
+    res.render('dashboard', { title: 'Dashboard', user: req.user })
   } else {
     res.render('index', { title: 'MeetWorking' })
   }
@@ -13,7 +13,7 @@ router.get('/', function (req, res, next) {
 /* Submit user authentication for login. */
 router.post('/', function (req, res, next) {
   if ('user') { // Determine if user is currently logged in
-    res.redirect('/users/dashboard', { title: 'Dashboard' })
+    res.render('dashboard', { title: 'Dashboard', user: req.user })
   } else {
     res.render('index', { title: 'MeetWorking', errorMessage: 'You are not logged in' })
   }

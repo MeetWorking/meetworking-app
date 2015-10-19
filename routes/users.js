@@ -3,8 +3,8 @@ var router = express.Router()
 
 /* GET dashboard page. */
 router.get('/dashboard', function (req, res, next) {
-  if ('user') { // Determine if user is currently logged in
-    res.render('dashboard', { title: 'Dashboard' })
+  if (req.user) { // Determine if user is currently logged in
+    res.render('dashboard', { title: 'Dashboard', user: req.user })
   } else {
     res.render('index', { title: 'MeetWorking' })
   }
@@ -12,7 +12,7 @@ router.get('/dashboard', function (req, res, next) {
 
 /* GET search results page. */
 router.get('/results', function (req, res, next) {
-  res.render('results', { title: 'Dashboard' })
+  res.render('results', { title: '' })
 })
 
 /* POST new company to follow. */
@@ -34,6 +34,7 @@ router.put('/settings', function (req, res, next) {
 /* Log the user out. */
 router.get('/logout', function (req, res, next) {
   // Remove user's cookie
+  req.logout()
   res.redirect('/')
 })
 
