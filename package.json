@@ -13,7 +13,11 @@
     "express": "~4.13.1",
     "jade": "~1.11.0",
     "morgan": "~1.6.1",
-    "serve-favicon": "~2.3.0"
+    "serve-favicon": "~2.3.0",
+    "passport": "~0.3.0",
+    "passport-meetup": "~1.0.0",
+    "passport-linkedin": "~1.0.0",
+    "express-session": "~1.11.3"
   },
   "devDependencies": {
     "gulp": "^3.9.0"
