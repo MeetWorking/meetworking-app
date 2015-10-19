@@ -82,6 +82,8 @@ passport.use(new LinkedInStrategy({
 // ----------------------------------------------------------------------------
 var routes = require('./routes/index')
 var users = require('./routes/users')
+var events = require('./routes/events')
+var specs = require('./routes/specs')
 
 var app = express()
 
@@ -95,11 +97,62 @@ app.use(logger('dev'))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(cookieParser())
+app.use(session({ secret: 'keyboard cat' }))
+app.use(passport.initialize())
+app.use(passport.session())
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/spec', express.static(path.join(__dirname, 'spec')))
 
 app.use('/', routes)
 app.use('/users', users)
+app.use('/events', events)
+app.use('/specs', specs)
+
+// GET /auth/meetup
+//   Use passport.authenticate() as route middleware to authenticate the
+//   request.  The first step in Meetup authentication will involve redirecting
+//   the user to meetup.com.  After authorization, Meetup will redirect the user
+//   back to this application at /auth/meetup/callback
+app.get('/auth/meetup',
+  passport.authenticate('meetup'),
+  function (req, res) {
+    // The request will be redirected to Meetup for authentication, so this
+    // function will not be called.
+  })
+
+app.get('/auth/linkedin',
+  passport.authenticate('linkedin'))
+
+// GET /auth/meetup/callback
+//   Use passport.authenticate() as route middleware to authenticate the
+//   request.  If authentication fails, the user will be redirected back to the
+//   login page.  Otherwise, the primary route function function will be called,
+//   which, in this example, will redirect the user to the home page.
+
+app.get('/auth/meetup/callback',
+  passport.authenticate('meetup', { successRedirect: '/', failureRedirect: '/login' })) // ,
+  // function (req, res) {
+  //   console.log('res===>', res)
+  //   res.redirect('/')
+  // })
+
+app.get('/auth/linkedin/callback',
+  passport.authenticate('linkedin', { successRedirect: '/', failureRedirect: '/login' })
+  // function (req, res) {
+  //   // Successful authentication, redirect home.
+  //   res.redirect('/')
+  // }
+)
+
+// Simple route middleware to ensure user is authenticated.
+//   Use this route middleware on any resource that needs to be protected.  If
+//   the request is authenticated (typically via a persistent login session),
+//   the request will proceed.  Otherwise, the user will be redirected to the
+//   login page.
+function ensureAuthenticated (req, res, next) {
+  if (req.isAuthenticated()) { return next() }
+  res.redirect('/login')
+}
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
