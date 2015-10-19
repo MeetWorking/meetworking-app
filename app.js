@@ -96,6 +96,7 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
+app.use('/spec', express.static(path.join(__dirname, 'spec')))
 
 app.use('/', routes)
 app.use('/users', users)

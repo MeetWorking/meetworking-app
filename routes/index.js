@@ -7,7 +7,7 @@ router.get('/', function (req, res, next) {
 })
 
 router.get('/spec', function (req, res, next) {
-  res.render('spec', { title: 'SpecRunner' })
+  res.render('spec', { title: 'Spec Runner' })
 })
 
 module.exports = router
