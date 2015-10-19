@@ -42,40 +42,40 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj)
 })
 
-passport.use(new MeetupStrategy({
-  consumerKey: MEETUP_KEY,
-  consumerSecret: MEETUP_SECRET,
-  callbackURL: 'http://127.0.0.1:3000/auth/meetup/callback'
-  // callbackURL: '/'
-},
-  function (token, tokenSecret, profile, done) {
-    // asynchronous verification, for effect...
-    process.nextTick(function () {
-      // To keep the example simple, the user's Meetup profile is returned to
-      // represent the logged-in user.  In a typical application, you would want
-      // to associate the Meetup account with a user record in your database,
-      // and return that user instead.
-      return done(null, profile)
-    })
-  }
-))
+// passport.use(new MeetupStrategy({
+//   consumerKey: MEETUP_KEY,
+//   consumerSecret: MEETUP_SECRET,
+//   callbackURL: 'http://127.0.0.1:3000/auth/meetup/callback'
+//   // callbackURL: '/'
+// },
+//   function (token, tokenSecret, profile, done) {
+//     // asynchronous verification, for effect...
+//     process.nextTick(function () {
+//       // To keep the example simple, the user's Meetup profile is returned to
+//       // represent the logged-in user.  In a typical application, you would want
+//       // to associate the Meetup account with a user record in your database,
+//       // and return that user instead.
+//       return done(null, profile)
+//     })
+//   }
+// ))
 
-passport.use(new LinkedInStrategy({
-  consumerKey: LINKEDIN_KEY,
-  consumerSecret: LINKEDIN_SECRET,
-  callbackURL: 'http://127.0.0.1:3000/auth/linkedin/callback',
-  profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url']
-},
-  function (token, tokenSecret, profile, done) {
-    // TODO: Why does the following break the meetup auth route?
-    // process.nextTick(function () {
-    //   return done(null, profile)
-    // })
-    // User.findOrCreate({ linkedinId: profile.id }, function (err, user) {
-    //   return done(err, user);
-    // })
-  }
-))
+// passport.use(new LinkedInStrategy({
+//   consumerKey: LINKEDIN_KEY,
+//   consumerSecret: LINKEDIN_SECRET,
+//   callbackURL: 'http://127.0.0.1:3000/auth/linkedin/callback',
+//   profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url']
+// },
+//   function (token, tokenSecret, profile, done) {
+//     // TODO: Why does the following break the meetup auth route?
+//     // process.nextTick(function () {
+//     //   return done(null, profile)
+//     // })
+//     // User.findOrCreate({ linkedinId: profile.id }, function (err, user) {
+//     //   return done(err, user);
+//     // })
+//   }
+// ))
 
 // ----------------------------------------------------------------------------
 // 2. Routes
