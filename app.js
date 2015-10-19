@@ -82,8 +82,8 @@ passport.use(new LinkedInStrategy({
 // ----------------------------------------------------------------------------
 var routes = require('./routes/index')
 var users = require('./routes/users')
-var events = require('/routes/events')
-var specs = require('/routes/specs')
+var events = require('./routes/events')
+var specs = require('./routes/specs')
 
 var app = express()
 
