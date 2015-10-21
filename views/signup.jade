@@ -6,14 +6,24 @@ block content
       .col-md-6.col-md-offset-3
         a(href="/auth/linkedin")
           button.btn.btn-inverse Autocomplete with LinkedIn
-        form(action="submit" type="POST")
+        form(action="/signup" method="POST")
           if user.linkedIn
             label(for="companyname") Name
             input(type="text" name="name" value="#{linkedIn.firstName} #{linkedIn.lastName}")
             label(for="companyname") Company
-            input(type="text" name="companyname" value="#{linkedIn.positions.values[0].company.name}")
+            if linkedIn.positions._total !== 0
+              input(type="text" name="companyname" value="#{linkedIn.positions.values[0].company.name}")
+            else
+              input(type="text" name="companyname" value="")
             label(for="companyname") Position
-            input(type="text" name="position" value="#{linkedIn.positions.values[0].title}")
+            if linkedIn.positions._total !== 0
+              input(type="text" name="position" value="#{linkedIn.positions.values[0].title}")
+            else
+              input(type="text" name="position" value="")
+            if linkedIn.summary
+              input(type="text" name="careergoals" value="#{linkedIn.summary}")
+            else
+              input(type="text" name="careergoals" value="")
           else
             label(for="companyname") Name
             input(type="text" name="name" value="")
@@ -25,3 +35,4 @@ block content
           input(type="text" name="company1" value="")
           input(type="text" name="company2" value="")
           input(type="text" name="company3" value="")
+          input(type="submit" value="Sign up!")

@@ -24,20 +24,8 @@ function ensureAuthenticated (req, res, next) {
 /* GET landing page. */
 router.get('/', function (req, res, next) {
   if (req.user) { // Determine if user is currently logged in
-    knex.select().from('members').where('memberid', req.user.id)
-      .then(function (result) {
-        // Retrieve member from table (maybe not needed)
-        // console.log('req.user.id==>', req.user.id)
-        // console.log('result==>', result)
-      })
-    knex.select().from('searchresults').where('searchmemberid', req.user.id)
-      .then(function (result) {
-        // Retrieve search results and display in order
-        // console.log('req.user.id==>', req.user.id)
-        // console.log('result==>', result)
-      })
-    console.log('req.user in index===>', req.user[0])
-    res.render('dashboard', { title: 'Dashboard', user: req.user[0] })
+    console.log('req.user in index===>', req.user)
+    res.render('dashboard', { title: 'Dashboard', user: req.user })
   } else {
     res.render('index', { title: 'MeetWorking' })
   }
@@ -58,11 +46,12 @@ router.get('/signup', function (req, res, next) {
     .then(function (result) {
       console.log('Here is your /signup result:  ', result)
       if (result.company === undefined || result.company === null) {
-        if (req.user[0].linkedIn) {
-          console.log('req.user[0].linkedIn---->', req.user[0].linkedIn)
-          res.render('signup', {title: 'Meetworking', user: req.user[0], linkedIn: req.user[0].linkedIn._json})
+        console.log('req.user ==>', req.user)
+        if (req.user.linkedIn) {
+          console.log('req.user.linkedIn---->', req.user.linkedIn)
+          res.render('signup', {title: 'Meetworking', user: req.user, linkedIn: req.user.linkedIn._json})
         } else {
-          res.render('signup', {title: 'Meetworking', user: req.user[0]})
+          res.render('signup', {title: 'Meetworking', user: req.user})
         }
       } else {
         res.redirect('/')
@@ -86,6 +75,7 @@ router.get('/signup', function (req, res, next) {
 
 /* POST signup form. */
 router.post('/signup', function (req, res, next) {
+  console.log('req.body ==>', req.body)
   res.redirect('/')
 })
 
