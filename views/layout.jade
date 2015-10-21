@@ -3,5 +3,14 @@ html
   head
     title= title
     link(rel='stylesheet', href='/stylesheets/style.css')
+    link(href='https://fonts.googleapis.com/css?family=Carter+One|Lora', rel='stylesheet', type='text/css')
+    link(rel='stylesheet', href='/bootstrap/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/bootstrap/css/bootstrap-theme.min.css')
+    script(src='https://code.jquery.com/jquery-2.1.4.min.js')
+    script(src='/bootstrap/js/bootstrap.min.js')
   body
+    .navbar.navbar-default.navbar-fixed-top
+      .container
+        a(href="/"): .logo.navbar-left Meetworking
+        a.btn.btn-primary.navbar-btn.navbar-right(href="/auth/meetup") Log in
     block content

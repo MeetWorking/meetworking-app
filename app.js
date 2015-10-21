@@ -26,6 +26,15 @@ var MEETUP_SECRET = config.MEETUP_SECRET
 var LINKEDIN_KEY = config.LINKEDIN_KEY
 var LINKEDIN_SECRET = config.LINKEDIN_SECRET
 
+// ----------------------------------------------------------------------------
+// 1b. Knex setup
+// ----------------------------------------------------------------------------
+var knex = require('knex')(config.AWS)
+// knex.select().table('searchresults')
+//   .then(function (reply) {
+//     console.log(reply)
+//   })
+
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
 //   serialize users into and deserialize users out of the session.  Typically,
@@ -34,7 +43,6 @@ var LINKEDIN_SECRET = config.LINKEDIN_SECRET
 //   have a database of user records, the complete Meetup profile is
 //   serialized and deserialized.
 passport.serializeUser(function (user, done) {
-  console.log('user====>', user)
   done(null, user)
 })
 
@@ -42,20 +50,70 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj)
 })
 
+function buildUserObj (memberid, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts, accesstoken) {
+  var user = {memberid, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts, accesstoken}
+  return user
+}
+
+function buildUser (o, usertypeid, accesstoken) {
+  var raw = JSON.parse(o._raw).results[0]
+  return buildUserObj(o.id, usertypeid, o.displayName, raw.link, raw.photo.photo_link, raw.bio, 'ON', accesstoken)
+}
+
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
-  callbackURL: 'http://127.0.0.1:3000/auth/meetup/callback'
+  callbackURL: 'http://localhost:3000/auth/meetup/callback'
   // callbackURL: '/'
 },
   function (token, tokenSecret, profile, done) {
     // asynchronous verification, for effect...
+    console.log('token===>', token)
+    console.log('tokenSecret===>', tokenSecret)
     process.nextTick(function () {
+      knex.select().from('members').where('memberid', profile.id)
+        .then(function (result) {
+          if (result[0] === undefined) {
+            // Sign up route
+            // User has not been searched or signed up
+            // Add a user to the db
+            console.log('New user route in signup')
+            console.log('New user---->', buildUser(profile))
+            var newUser = buildUser(profile, 1, token) // where 1 is the user type, tbd
+            knex('members')
+              .insert(newUser)
+              .catch(function (err) { console.log(err) })
+            // ...
+            // Return user from our db...
+            return done(null, newUser)
+          } else if (result[0].usertypeid < 3) {
+            // Log in route
+            // User has previously signed up
+            // Return existing user
+            return done(null, result)
+          } else {
+            // Log in route for searched users
+            // Modify previously searched user
+            knex('members')
+              .update({
+                alerts: 'ON',
+                accesstoken: token,
+                usertypeid: 1 // where 1 is the user type, tbd
+              })
+              .then(function () {
+                knex.select().from('members').where('memberid', profile.id)
+                  .then(function (res) {
+                    return done(null, result)
+                  }).catch(function (err) { console.log(err) })
+              }).catch(function (err) { console.log(err) })
+          }
+        }).catch(function (err) { console.log(err) })
       // To keep the example simple, the user's Meetup profile is returned to
-      // represent the logged-in user.  In a typical application, you would want
+      // represent the logged-in user. In a typical application, you would want
       // to associate the Meetup account with a user record in your database,
       // and return that user instead.
-      return done(null, profile)
+      // console.log('profile===>', profile)
+      // return done(null, profile)
     })
   }
 ))
@@ -63,14 +121,17 @@ passport.use(new MeetupStrategy({
 passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
   consumerSecret: LINKEDIN_SECRET,
-  callbackURL: 'http://127.0.0.1:3000/auth/linkedin/callback',
-  profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url']
+  callbackURL: 'http://localhost:3000/auth/linkedin/callback',
+  profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url'],
+  passReqToCallback: true
 },
-  function (token, tokenSecret, profile, done) {
+  function (req, token, tokenSecret, profile, done) {
     // TODO: Why does the following break the meetup auth route?
-    // process.nextTick(function () {
-    //   return done(null, profile)
-    // })
+    process.nextTick(function () {
+      var addLinkedIn = req.user
+      addLinkedIn[0].linkedIn = profile
+      return done(null, addLinkedIn)
+    })
     // User.findOrCreate({ linkedinId: profile.id }, function (err, user) {
     //   return done(err, user);
     // })
@@ -97,7 +158,12 @@ app.use(logger('dev'))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(cookieParser())
-app.use(session({ secret: 'keyboard cat' }))
+app.use(session({
+  secret: 'keyboard cat',
+  resave: true,
+  saveUninitialized: true,
+  cookie: { secure: false }
+}))
 app.use(passport.initialize())
 app.use(passport.session())
 app.use(express.static(path.join(__dirname, 'public')))
@@ -128,31 +194,43 @@ app.get('/auth/linkedin',
 //   request.  If authentication fails, the user will be redirected back to the
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
-
 app.get('/auth/meetup/callback',
-  passport.authenticate('meetup', { successRedirect: '/', failureRedirect: '/login' })) // ,
+  passport.authenticate('meetup', { successRedirect: '/signup', failureRedirect: '/login' })) // ,
   // function (req, res) {
-  //   console.log('res===>', res)
-  //   res.redirect('/')
+    // knex.select().from('members').where('memberid', req.user.id)
+    //   .then(function (result) {
+    //     if (result[0] === undefined) {
+    //       // Sign up route
+    //       // User has not been searched or signed up
+    //       // Add a user to the db
+    //       console.log('New user route in signup')
+    //       console.log('New user---->', buildUser(res.req.user))
+    //       knex('members')
+    //         .insert(buildUser(res.req.user, 1)) // where 1 is the user type, tbd
+    //         .catch(function (err) { console.log(err) })
+    //       // ...
+    //       // Send them back to signup page with flag
+    //       res.render('signup')
+    //     } else if (result[0].usertypeid < 3) {
+    //       // Log in route
+    //       // User has previously signed up
+    //       console.log()
+    //       res.redirect('/')
+    //     } else {
+    //       // Log in route for searched users
+    //       // Modify a user in the db
+    //       res.redirect('/signup')
+    //     }
+    //   })
   // })
 
 app.get('/auth/linkedin/callback',
-  passport.authenticate('linkedin', { successRedirect: '/', failureRedirect: '/login' })
+  passport.authenticate('linkedin', { successRedirect: '/signup', failureRedirect: '/login' })
   // function (req, res) {
   //   // Successful authentication, redirect home.
   //   res.redirect('/')
   // }
 )
-
-// Simple route middleware to ensure user is authenticated.
-//   Use this route middleware on any resource that needs to be protected.  If
-//   the request is authenticated (typically via a persistent login session),
-//   the request will proceed.  Otherwise, the user will be redirected to the
-//   login page.
-function ensureAuthenticated (req, res, next) {
-  if (req.isAuthenticated()) { return next() }
-  res.redirect('/login')
-}
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

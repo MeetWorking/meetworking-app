@@ -1,6 +1,18 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
-  p Please <a href='/auth/meetup'>Login</a>
+  .jumbotron
+    .carousel-slide(data-ride="carousel")
+      .carousel-inner
+        .item-active
+          img.img-responsive(src="/images/OfficeTable_HeisenbergMediaCCBY-SA20.jpg" alt="Startup Live Vienna by Heisenberg Media, CC BY-SA 2.0")
+          .carousel-caption
+            .btn-group.btn-group-lg(role="group")
+              a(href="/auth/meetup")
+                .btn.btn-primary
+                  h2 Get hired!
+                  p Sign up
+              a(href="/auth/meetup")
+                .btn.btn-success
+                  h2 Recruit!
+                  p Sign up
