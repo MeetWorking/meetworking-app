@@ -50,14 +50,14 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj)
 })
 
-function buildUserObj (memberid, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts, accesstoken) {
-  var user = {memberid, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts, accesstoken}
+function buildUserObj (memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts) {
+  var user = {memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts}
   return user
 }
 
-function buildUser (o, usertypeid, accesstoken) {
-  var raw = JSON.parse(o._raw).results[0]
-  return buildUserObj(o.id, usertypeid, o.displayName, raw.link, raw.photo.photo_link, raw.bio, 'ON', accesstoken)
+function buildUser (profile, accesstoken, usertypeid) {
+  var raw = JSON.parse(profile._raw).results[0]
+  return buildUserObj(profile.id, accesstoken, usertypeid, profile.displayName, raw.link, raw.photo.photo_link, raw.bio, 'OFF')
 }
 
 function addTopics (profile) {
@@ -68,6 +68,41 @@ function addTopics (profile) {
       .insert({ memberid, topic: e.name })
       .catch(function (err) { console.log(err) })
   })
+}
+
+function addSocialMediaLinks (profile) {
+  console.log('profile ==>', profile)
+  var memberid = profile.id
+  var mediaservices = profile._json.results[0].other_services
+  for (var e in mediaservices) {
+    var socialmediauid
+    var mediaprofileurl = mediaservices[e].identifier
+
+    switch (e) {
+      case 'facebook':
+        socialmediauid = 1
+        break
+      case 'twitter':
+        socialmediauid = 2
+        mediaprofileurl = 'http://twitter.com/' + mediaservices[e].identifier.slice(1)
+        break
+      case 'linkedin':
+        socialmediauid = 3
+        break
+      case 'flickr':
+        socialmediauid = 4
+        break
+      case 'tumblr':
+        socialmediauid = 5
+        break
+      default:
+        console.error('Unknown social media outlet')
+    }
+
+    knex('socialmedialinks')
+      .insert({ memberid, socialmediauid, mediaprofileurl })
+      .catch(function (err) { console.log(err) })
+  }
 }
 
 function logErr (err) {
@@ -90,14 +125,13 @@ passport.use(new MeetupStrategy({
             console.log('----Signing up new user----')
             // User has not been searched or signed up
             // Add a user to the db
-            var newUser = buildUser(profile, 1, token) // where 1 is the user type, tbd
+            var newUser = buildUser(profile, token, 1) // where 1 is the user type, tbd
             knex('members')
               .insert(newUser)
               .catch(function (err) { console.log(err) })
             // Add topics to db
             addTopics(profile)
-            // TODO: Add social profiles to socialmedialinks db
-            // ...
+            addSocialMediaLinks(profile)
             // Return user from our db...
             return done(null, newUser)
           } else if (result[0].usertypeid < 3) {
@@ -148,7 +182,7 @@ passport.use(new LinkedInStrategy({
       // Paste LinkedIn data onto user for auto-fill of signup form
       // TODO: Remove pasted data on form submit
       var addLinkedIn = req.user
-      addLinkedIn[0].linkedIn = profile
+      addLinkedIn.linkedIn = profile
       return done(null, addLinkedIn)
     })
     // User.findOrCreate({ linkedinId: profile.id }, function (err, user) {
