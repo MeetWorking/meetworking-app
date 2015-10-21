@@ -1,5 +1,27 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  .container
+    .row
+      .col-md-6.col-md-offset-3
+        a(href="/auth/linkedin")
+          button.btn.btn-inverse Autocomplete with LinkedIn
+        form(action="submit" type="POST")
+          if user.linkedIn
+            label(for="companyname") Name
+            input(type="text" name="name" value="#{linkedIn.firstName} #{linkedIn.lastName}")
+            label(for="companyname") Company
+            input(type="text" name="companyname" value="#{linkedIn.positions.values[0].company.name}")
+            label(for="companyname") Position
+            input(type="text" name="position" value="#{linkedIn.positions.values[0].title}")
+          else
+            label(for="companyname") Name
+            input(type="text" name="name" value="")
+            label(for="companyname") Company
+            input(type="text" name="companyname" value="")
+            label(for="companyname") Position
+            input(type="text" name="position" value="")
+          p Choose three companies to meet:
+          input(type="text" name="company1" value="")
+          input(type="text" name="company2" value="")
+          input(type="text" name="company3" value="")

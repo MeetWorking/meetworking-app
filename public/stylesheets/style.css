@@ -1,8 +1,14 @@
-body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+.logo {
+  font-family: "Carter One", cursive;
+  font-size: 30px;
 }
 
-a {
-  color: #00B7FF;
+.carousel-caption {
+  text-align: center;
+  bottom: 50%;
+  top: 25%;
+}
+
+body {
+  padding-top: 60px;
 }
