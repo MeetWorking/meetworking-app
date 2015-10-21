@@ -60,6 +60,20 @@ function buildUser (o, usertypeid, accesstoken) {
   return buildUserObj(o.id, usertypeid, o.displayName, raw.link, raw.photo.photo_link, raw.bio, 'ON', accesstoken)
 }
 
+function addTopics (profile) {
+  var memberid = profile.id
+  profile._json.results[0].topics.forEach(function (e, i) {
+    // console.log({ memberid, topic: e.name })
+    knex('topics')
+      .insert({ memberid, topic: e.name })
+      .catch(function (err) { console.log(err) })
+  })
+}
+
+function logErr (err) {
+  console.error(err)
+}
+
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
@@ -68,21 +82,21 @@ passport.use(new MeetupStrategy({
 },
   function (token, tokenSecret, profile, done) {
     // asynchronous verification, for effect...
-    console.log('token===>', token)
-    console.log('tokenSecret===>', tokenSecret)
     process.nextTick(function () {
       knex.select().from('members').where('memberid', profile.id)
         .then(function (result) {
           if (result[0] === undefined) {
             // Sign up route
+            console.log('----Signing up new user----')
             // User has not been searched or signed up
             // Add a user to the db
-            console.log('New user route in signup')
-            console.log('New user---->', buildUser(profile))
             var newUser = buildUser(profile, 1, token) // where 1 is the user type, tbd
             knex('members')
               .insert(newUser)
               .catch(function (err) { console.log(err) })
+            // Add topics to db
+            addTopics(profile)
+            // TODO: Add social profiles to socialmedialinks db
             // ...
             // Return user from our db...
             return done(null, newUser)
@@ -105,9 +119,11 @@ passport.use(new MeetupStrategy({
                   .then(function (res) {
                     return done(null, result)
                   }).catch(function (err) { console.log(err) })
-              }).catch(function (err) { console.log(err) })
+              })
+              .catch(logErr(err))
           }
-        }).catch(function (err) { console.log(err) })
+        })
+        .catch(function (err) { console.log(err) })
       // To keep the example simple, the user's Meetup profile is returned to
       // represent the logged-in user. In a typical application, you would want
       // to associate the Meetup account with a user record in your database,
@@ -126,8 +142,11 @@ passport.use(new LinkedInStrategy({
   passReqToCallback: true
 },
   function (req, token, tokenSecret, profile, done) {
-    // TODO: Why does the following break the meetup auth route?
     process.nextTick(function () {
+      // TODO: Add LinkedIn profile to socialmedialinks db
+      // ...
+      // Paste LinkedIn data onto user for auto-fill of signup form
+      // TODO: Remove pasted data on form submit
       var addLinkedIn = req.user
       addLinkedIn[0].linkedIn = profile
       return done(null, addLinkedIn)
