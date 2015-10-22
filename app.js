@@ -52,6 +52,7 @@ passport.deserializeUser(function (obj, done) {
 
 function buildUserObj (memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts) {
   var user = {memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts}
+  console.log('AM I AN ARRAY?===> ', user)
   return user
 }
 
@@ -129,16 +130,18 @@ passport.use(new MeetupStrategy({
             knex('members')
               .insert(newUser)
               .catch(function (err) { console.log(err) })
-            // Add topics to db
-            addTopics(profile)
-            addSocialMediaLinks(profile)
+              .done(function () {
+                // Add topics to db
+                addTopics(profile)
+                addSocialMediaLinks(profile)
+              })
             // Return user from our db...
             return done(null, newUser)
           } else if (result[0].usertypeid < 3) {
             // Log in route
             // User has previously signed up
             // Return existing user
-            return done(null, result)
+            return done(null, result[0])
           } else {
             // Log in route for searched users
             // Modify previously searched user
@@ -148,13 +151,14 @@ passport.use(new MeetupStrategy({
                 accesstoken: token,
                 usertypeid: 1 // where 1 is the user type, tbd
               })
+              .where('memberid', profile.id)
               .then(function () {
                 knex.select().from('members').where('memberid', profile.id)
                   .then(function (res) {
-                    return done(null, result)
+                    return done(null, result[0])
                   }).catch(function (err) { console.log(err) })
               })
-              .catch(logErr(err))
+              .catch(function (err) { console.log(err) })
           }
         })
         .catch(function (err) { console.log(err) })
@@ -172,7 +176,7 @@ passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
   consumerSecret: LINKEDIN_SECRET,
   callbackURL: 'http://localhost:3000/auth/linkedin/callback',
-  profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url'],
+  profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url', 'public-profile-url'],
   passReqToCallback: true
 },
   function (req, token, tokenSecret, profile, done) {
