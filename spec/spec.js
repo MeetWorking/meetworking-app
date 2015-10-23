@@ -1,14 +1,32 @@
-/* globals describe, it, expect */
+/* globals describe, it, expect, beforeEach, afterEach */
+var index = require('../routes/index')
+var config = require('../config')
+var knex = require('knex')(config.AWS)
+var request = require('supertest')
+var app = require('../app')
 
 describe('Signing up', function () {
+  var server
+  beforeEach(function () {
+    server = require('../bin/www')
+  })
+  afterEach(function () {
+    server.close()
+  })
   it('should request authentication for Meetup.com', function () {
-    var a = true
-    expect(a).toBe(true)
+    request(server)
+      .get('/auth/meetup')
+      .expect(function (res) {
+        console.log(res)
+      })
   })
 
   it('should receive OAuth token after receiving successful authentication from Meetup.com', function () {
-    var a = true
-    expect(a).toBe(true)
+    request(server)
+      .get('/auth/meetup/callback')
+      .expect(function (res) {
+        console.log(res)
+      })
   })
 
   it('should add a new record in the members table', function () {
@@ -24,6 +42,26 @@ describe('Signing up', function () {
   it('should load models with data if the user has search result records in the database', function () {
     var a = true
     expect(a).toBe(true)
+  })
+
+  it('should add company, position and career goals fields to the member database', function () {
+    var result
+    var form = {
+      name: 'Mitch Lillie',
+      company: 'Portland Code School',
+      position: 'JavaScript Developer',
+      careergoals: 'Networking and job hunting!'
+    }
+    index.saveProfile(188525180, form)
+    knex('members')
+      .select()
+      .where('name', 'Mitch Lillie')
+      .then(function (result) {
+        console.log(result)
+        result = result
+      })
+      .catch(function (err) { console.error(err) })
+    // expect(typeof result).toEqual('object')
   })
 })
 
