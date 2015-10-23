@@ -12,16 +12,19 @@ block content
           if user.linkedIn
             label(for="name") Name 
             input(type="text" name="name" value="#{linkedIn.firstName} #{linkedIn.lastName}")
+            br
             label(for="company") Company 
             if linkedIn.positions._total !== 0
               input(type="text" name="company" value="#{linkedIn.positions.values[0].company.name}")
             else
               input(type="text" name="company" value="")
+            br
             label(for="position") Position 
             if linkedIn.positions._total !== 0
               input(type="text" name="position" value="#{linkedIn.positions.values[0].title}")
             else
               input(type="text" name="position" value="")
+            br
             label(for="careergoals") Career Goals 
             if linkedIn.summary
               input(type="text" name="careergoals" value="#{linkedIn.summary}")

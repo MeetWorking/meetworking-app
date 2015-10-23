@@ -21,7 +21,8 @@
     "passport-linkedin": "~1.0.0",
     "passport-meetup": "~1.0.0",
     "request": "^2.65.0",
-    "serve-favicon": "~2.3.0"
+    "serve-favicon": "~2.3.0",
+    "supertest": "^1.1.0"
   },
   "devDependencies": {
     "gulp": "^3.9.0"

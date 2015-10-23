@@ -30,10 +30,6 @@ var LINKEDIN_SECRET = config.LINKEDIN_SECRET
 // 1b. Knex setup
 // ----------------------------------------------------------------------------
 var knex = require('knex')(config.AWS)
-// knex.select().table('searchresults')
-//   .then(function (reply) {
-//     console.log(reply)
-//   })
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -52,7 +48,6 @@ passport.deserializeUser(function (obj, done) {
 
 function buildUserObj (memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts) {
   var user = {memberid, accesstoken, usertypeid, name, meetupprofileurl, imageurl, meetupbio, alerts}
-  console.log('AM I AN ARRAY?===> ', user)
   return user
 }
 
@@ -64,7 +59,6 @@ function buildUser (profile, accesstoken, usertypeid) {
 function addTopics (profile) {
   var memberid = profile.id
   profile._json.results[0].topics.forEach(function (e, i) {
-    // console.log({ memberid, topic: e.name })
     knex('topics')
       .insert({ memberid, topic: e.name })
       .catch(function (err) { console.log(err) })
@@ -72,7 +66,6 @@ function addTopics (profile) {
 }
 
 function addSocialMediaLinks (profile) {
-  console.log('profile ==>', profile)
   var memberid = profile.id
   var mediaservices = profile._json.results[0].other_services
   for (var e in mediaservices) {
@@ -104,10 +97,6 @@ function addSocialMediaLinks (profile) {
       .insert({ memberid, socialmediauid, mediaprofileurl })
       .catch(function (err) { console.log(err) })
   }
-}
-
-function logErr (err) {
-  console.error(err)
 }
 
 passport.use(new MeetupStrategy({
@@ -321,3 +310,7 @@ app.use(function (err, req, res, next) {
 })
 
 module.exports = app
+module.exports.buildUserObj = buildUserObj
+module.exports.buildUser = buildUser
+module.exports.addTopics = addTopics
+module.exports.addSocialMediaLinks = addSocialMediaLinks
