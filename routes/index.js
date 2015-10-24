@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var request = require('request')
+var _ = require('lodash')
 
 // ----------------------------------------------------------------------------
 // 1b. Knex setup
@@ -301,16 +302,16 @@ router.post('/signup', function (req, res, next) {
               var result = JSON.parse(body)
               console.log('===RSVP API RESULT===', result)
               result.results.forEach(function (e, i) {
-                var obj = {
+                var rsvpsobj = {
                   memberid: e.member.member_id,
                   eventid: e.event.id
                 }
-                rsvps.push(obj)
+                rsvps.push(rsvpsobj)
               })
               knex.schema
                 .createTable('temprsvps', function (table) {
                   table.string('eventid')
-                  table.string('memberid')
+                  table.integer('memberid')
                   // TODO: Add more columns if necessary
                 })
                 .catch(function (err) { console.error(err) })
@@ -320,13 +321,108 @@ router.post('/signup', function (req, res, next) {
                     .catch(function (err) { console.error(err) })
                     .then(function () {
                       // run getBios
-                      // run getGroupBios
+                      knex('temprsvps')
+                        .pluck('memberid')
+                        .then(function (tempmembers) {
+                          knex('members')
+                            .pluck('memberid')
+                            .then(function (members) {
+                              var uniquetempmembers = _.uniq(tempmembers)
+                              var differencetempmembers = _.difference(uniquetempmembers, members)
+                              var memberids = differencetempmembers.join('%2C')
+                              var url = 'https://api.meetup.com/2/members?&sign=true&photo-host=public&format=json&member_id=' + memberids + '&page=100&access_token=' + accesstoken
+                              getBios(url)
+                            })
+                        })
+                        .catch(function (err) { console.error(err) })
                     })
                 })
             }
           })
         })
     }, 1000)
+  }
+
+  function getBios (url) {
+    request(url, function (error, response, body) {
+      var members = []
+      var socialmedias = []
+      var topics = []
+      if (!error && response.statusCode === 200) {
+        var membersresult = JSON.parse(body)
+        membersresult.results.forEach(function (e, i) {
+          var imageurl = ''
+          if (e.photo) {
+            imageurl = e.photo.photo_link || ''
+          }
+          var membersobj = {
+            memberid: e.id,
+            name: e.name,
+            meetupprofileurl: e.link,
+            imageurl,
+            meetupbio: e.bio || '',
+            usertypeid: 3,
+            alerts: 'OFF'
+          }
+          var mediaservices = e.other_services
+          for (var key in mediaservices) {
+            var socialmediaobj = {}
+            socialmediaobj.memberid = e.id
+            socialmediaobj.mediaprofileurl = mediaservices[key].identifier
+
+            switch (key) {
+              case 'facebook':
+                socialmediaobj.socialmediauid = 1
+                break
+              case 'twitter':
+                socialmediaobj.socialmediauid = 2
+                socialmediaobj.mediaprofileurl = 'http://twitter.com/' + mediaservices[key].identifier.slice(1)
+                break
+              case 'linkedin':
+                socialmediaobj.socialmediauid = 3
+                break
+              case 'flickr':
+                socialmediaobj.socialmediauid = 4
+                break
+              case 'tumblr':
+                socialmediaobj.socialmediauid = 5
+                break
+              default:
+                console.error('Unknown social media outlet')
+            }
+            socialmedias.push(socialmediaobj)
+          }
+          for (var topic in e.topics) {
+            var topicobj = {
+              memberid: e.id,
+              topic: e.topics[topic].name
+            }
+            topics.push(topicobj)
+          }
+          members.push(membersobj)
+        })
+        knex('members')
+          .insert(members)
+          .catch(function (err) { console.error(err) })
+          .then(function () {
+            knex('socialmedialinks')
+              .insert(socialmedias)
+              .catch(function (err) { console.error(err) })
+              .then(function () {
+                knex('topics')
+                  .insert(topics)
+                  .catch(function (err) { console.error(err) })
+              })
+          })
+        if (membersresult.meta.next !== '') {
+          getBios(membersresult.meta.next)
+          console.log('requesting next group bio...')
+        } else {
+          console.log('getBios has finished====')
+          // Kick off get group bios function
+        }
+      }
+    })
   }
   res.redirect('/')
 })
