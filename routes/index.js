@@ -161,7 +161,7 @@ router.post('/signup', function (req, res, next) {
       table.string('eventid')
       table.string('groupid')
       table.string('groupname', 45)
-      table.string('title', 45)
+      table.string('title', 180)
       table.text('description')
       table.text('location')
       table.dateTime('datetime')
@@ -425,6 +425,33 @@ router.post('/signup', function (req, res, next) {
     })
   }
   res.redirect('/')
+})
+
+/* GET searchresults data for the dashboard. */
+router.get('/searchresults', function (req, res, next) {
+  var memberid = req.user.memberid
+  var searchResults = []
+  // each item in the array needs to be an object
+    // {
+    //   id: '',
+    //   eventid: '',
+    //   groupid: '',
+    //   groupname: '',
+    //   title: '',
+    //   description: '',
+    //   location: '',
+    //   datetime: '',
+    //   status: '',
+    //   rsvps: '',
+    //   spotsleft: '',
+    //   meetworkers: '',
+    //   recruiters: '',
+    //   displaystatus: '',
+    //   searchuids: []
+    // }
+  // Use SQL queries via the knex module to find all data relevant to events tied to the user's memberid and saved search companies
+
+  res.send(searchResults)
 })
 
 module.exports = router
