@@ -106,6 +106,9 @@ function getGroupBios (memberid, accesstoken, groupBios) {
             groupBios.push(e.bio)
           }
         })
+      } else {
+        console.log('Error caught in getGroupBios API call: ', error)
+        console.log('Error response code                  : ', response.statusCode)
       }
       if (result.meta.next !== '') {
         getGroupBios(memberid, result.meta.next)
@@ -171,13 +174,6 @@ router.post('/signup', function (req, res, next) {
     })
     .catch(function (err) { console.error(err) })
     .then(getVenues(companies))
-    // .catch(function (err) { console.error(err) })
-    // .then(getEvents(conciergeEventsUrl, false))
-    // .catch(function (err) { console.error(err) })
-    // .then(getCompanyEvents(companies))
-    // .catch(function (err) { console.error(err) })
-    // .then(getRSVPs(rsvpUrl, true))
-    // .catch(function (err) { console.error(err) })
   // TODO: Drop table
 
   function getVenues (companies) {
@@ -240,7 +236,7 @@ router.post('/signup', function (req, res, next) {
                 if (result.length > 0) {
                   console.log('event exists in the temp table')
                   if (index === urls.length - 1 && i === length - 1) {
-                    getRSVPs()
+                    getRSVPs(false, [])
                   }
                 } else {
                   knex('tempevents')
@@ -248,7 +244,7 @@ router.post('/signup', function (req, res, next) {
                     .catch(function (err) { console.error(err) })
                     .then(function () {
                       if (index === 2 && i === length - 1) {
-                        getRSVPs()
+                        getRSVPs(false, [])
                       }
                     })
                 }
@@ -285,7 +281,7 @@ router.post('/signup', function (req, res, next) {
     }
   }
     // Insert group bios into members table
-  function getRSVPs (url) {
+  function getRSVPs (url, rsvps) {
     setTimeout(function () {
       console.log('getRSVPs has been called-------')
       knex
@@ -294,10 +290,8 @@ router.post('/signup', function (req, res, next) {
         .then(function (eids) {
           console.log('====event ids plucked====', eids)
           var eventids = eids.join('%2C')
-          var url = 'https://api.meetup.com/2/rsvps?&sign=true&photo-host=public&type=json&event_id=' + eventids + '&page=100&access_token=' + accesstoken
-          request(url, function (error, response, body) {
-            console.log('error: ', error)
-            var rsvps = []
+          var rsvpurl = url || 'https://api.meetup.com/2/rsvps?&sign=true&photo-host=public&type=json&event_id=' + eventids + '&page=100&access_token=' + accesstoken
+          request(rsvpurl, function (error, response, body) {
             if (!error && response.statusCode === 200) {
               var result = JSON.parse(body)
               console.log('===RSVP API RESULT===', result)
@@ -308,35 +302,40 @@ router.post('/signup', function (req, res, next) {
                 }
                 rsvps.push(rsvpsobj)
               })
-              knex.schema
-                .createTable('temprsvps', function (table) {
-                  table.string('eventid')
-                  table.integer('memberid')
-                  // TODO: Add more columns if necessary
-                })
-                .catch(function (err) { console.error(err) })
-                .then(function () {
-                  knex('temprsvps')
-                    .insert(rsvps)
-                    .catch(function (err) { console.error(err) })
-                    .then(function () {
-                      // run getBios
-                      knex('temprsvps')
-                        .pluck('memberid')
-                        .then(function (tempmembers) {
-                          knex('members')
-                            .pluck('memberid')
-                            .then(function (members) {
-                              var uniquetempmembers = _.uniq(tempmembers)
-                              var differencetempmembers = _.difference(uniquetempmembers, members)
-                              var memberids = differencetempmembers.join('%2C')
-                              var url = 'https://api.meetup.com/2/members?&sign=true&photo-host=public&format=json&member_id=' + memberids + '&page=100&access_token=' + accesstoken
-                              getBios(url)
-                            })
-                        })
-                        .catch(function (err) { console.error(err) })
-                    })
-                })
+              if (result.meta.next !== '') {
+                getRSVPs(result.meta.next, rsvps)
+              } else {
+                knex.schema
+                  .createTable('temprsvps', function (table) {
+                    table.string('eventid')
+                    table.integer('memberid')
+                    // TODO: Add more columns if necessary
+                  })
+                  .catch(function (err) { console.error(err) })
+                  .then(function () {
+                    knex('temprsvps')
+                      .insert(rsvps)
+                      .catch(function (err) { console.error(err) })
+                      .then(function () {
+                        // run getBios
+                        knex('temprsvps')
+                          .pluck('memberid')
+                          .then(function (tempmembers) {
+                            knex('members')
+                              .pluck('memberid')
+                              .then(function (members) {
+                                var uniquetempmembers = _.uniq(tempmembers)
+                                var differencetempmembers = _.difference(uniquetempmembers, members)
+                                var memberids = differencetempmembers.join('%2C')
+                                var url = 'https://api.meetup.com/2/members?&sign=true&photo-host=public&format=json&member_id=' + memberids + '&page=100&access_token=' + accesstoken
+                                getBios(url)
+                              })
+                              .catch(function (err) { console.error(err) })
+                          })
+                          .catch(function (err) { console.error(err) })
+                      })
+                  })
+              }
             }
           })
         })
@@ -419,12 +418,68 @@ router.post('/signup', function (req, res, next) {
           console.log('requesting next group bio...')
         } else {
           console.log('getBios has finished====')
-          // Kick off get group bios function
+          knex('members')
+            .pluck('memberid')
+            .then(function (members) {
+              members.forEach(function (e, i) {
+                setTimeout((function (x) {
+                  return function () { getGroupBios(e, accesstoken, []) }
+                })(i), 5000 * i)
+              })
+            })
+            .catch(function (err) { console.error(err) })
         }
       }
     })
   }
+  function searchCompanies (company, results) {
+    knex.select()
+      .from('members')
+      .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', company)
+      .then(function (result) {
+        console.log(result)
+      })
+  }
   res.redirect('/')
+})
+
+router.get('/testing', function (req, res, next) {
+  function searchCompanies (company, results) {
+    knex.select()
+      .from('members')
+      .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', company)
+      .then(function (result) {
+        console.log(result)
+        var searchresults = []
+        result.forEach(function (e, i) {
+          var searchresult = {
+            eventid: 0,
+            searchuid: 0,
+            searchmemberid: e.memberid,
+            rsvpstatus: '',
+            companymatch: '',
+            employematch: '',
+            status: ''
+          }
+        })
+      })
+  }
+  searchCompanies('Tripwire')
+  res.send('Check your logs')
+})
+
+router.get('/cleanup', function (req, res, next) {
+  console.log('token: ', req.user.accesstoken)
+  knex('members')
+    .pluck('memberid')
+    .whereNull('meetupgroupbios')
+    .then(function (members) {
+      // members.forEach(function (e, i) {
+      //   setTimeout((function (x) {
+      //     return function () { getGroupBios(e, accesstoken, []) }
+      //   })(i), 30000 * i)
+      // })
+    })
 })
 
 module.exports = router

@@ -53,7 +53,11 @@ function buildUserObj (memberid, accesstoken, usertypeid, name, meetupprofileurl
 
 function buildUser (profile, accesstoken, usertypeid) {
   var raw = JSON.parse(profile._raw).results[0]
-  return buildUserObj(profile.id, accesstoken, usertypeid, profile.displayName, raw.link, raw.photo.photo_link, raw.bio, 'OFF')
+  var photo = ''
+  if (raw.photo) {
+    photo = raw.photo.photo_link || ''
+  }
+  return buildUserObj(profile.id, accesstoken, usertypeid, profile.displayName, raw.link, photo, raw.bio, 'OFF')
 }
 
 function addTopics (profile) {
