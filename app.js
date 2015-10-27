@@ -120,6 +120,7 @@ passport.use(new MeetupStrategy({
             // User has not been searched or signed up
             // Add a user to the db
             var newUser = buildUser(profile, token, 1) // where 1 is the user type, tbd
+            console.log('new user, ==', newUser)
             knex('members')
               .insert(newUser)
               .catch(function (err) { console.log(err) })
@@ -134,7 +135,15 @@ passport.use(new MeetupStrategy({
             // Log in route
             // User has previously signed up
             // Return existing user
-            return done(null, result[0])
+            knex('members')
+              .where('memberid', result[0].memberid)
+              .update('accesstoken', token)
+              .catch(function (err) { console.log(err) })
+              .done(function () {
+                var newtokenresult = result[0]
+                newtokenresult.accesstoken = token
+                return done(null, newtokenresult)
+              })
           } else {
             // Log in route for searched users
             // Modify previously searched user
