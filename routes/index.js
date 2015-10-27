@@ -172,7 +172,7 @@ router.post('/signup', function (req, res, next) {
       table.string('eventid')
       table.string('groupid')
       table.string('groupname', 45)
-      table.string('title', 45)
+      table.string('title', 180)
       table.text('description')
       table.text('location').index()
       table.dateTime('datetime')
