@@ -18,15 +18,6 @@ router.get('/', function (req, res, next) {
   }
 })
 
-// /* Submit user authentication for login. */
-// router.post('/', function (req, res, next) {
-//   if ('user') { // Determine if user is currently logged in
-//     res.render('dashboard', { title: 'Dashboard', user: req.user })
-//   } else {
-//     res.render('index', { title: 'MeetWorking', errorMessage: 'You are not logged in' })
-//   }
-// })
-
 /* GET signup page. */
 router.get('/signup', function (req, res, next) {
   // Get member from members table
@@ -34,6 +25,7 @@ router.get('/signup', function (req, res, next) {
   var currentuser = req.user.memberid || req.user.id
   knex.select().from('members').where('memberid', currentuser)
     .then(function (result) {
+      console.log('result of initial signup search: ', result)
       // test if they have filled in company (if they have seen the signup form before)
       if (result[0].company === undefined || result[0].company === null) {
         // test if LinkedIn account has been linked
@@ -132,7 +124,10 @@ function addGroupBios (memberid, meetupgroupbios) {
   knex('members')
     .where('memberid', memberid)
     .update({ meetupgroupbios })
-    .catch(function (err) { console.error(err) })
+    .catch(function (err) {
+      console.log('Error in addGroupBios')
+      console.error(err)
+    })
     .then(function () {
       console.log('finished adding group bios to members table-------')
     })
@@ -143,6 +138,8 @@ router.post('/signup', function (req, res, next) {
   // variables for whole scope
   var memberid = req.user.memberid
   var accesstoken = req.user.accesstoken
+  var form = req.body
+  var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
 
   // Update members table with profile data
   // NOTE: The company parameter is used to test if a user has signed up or not.
@@ -155,8 +152,6 @@ router.post('/signup', function (req, res, next) {
   req.user = addLinkedIn(req.user)
 
   // Update searches table with three companies
-  var form = req.body
-  var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
   companies.forEach(function (e, i) {
     if (e.length > 2) {
       addCompany(memberid, e)
@@ -167,34 +162,27 @@ router.post('/signup', function (req, res, next) {
   getGroupBios(memberid, accesstoken, [])
   var memberEventsUrl = 'https://api.meetup.com/2/events?&sign=true&photo-host=public&format=json&time=,2w&page=100&member_id=' + memberid + '&access_token=' + accesstoken
   var conciergeEventsUrl = 'https://api.meetup.com/2/concierge?&sign=true&photo-host=public&format=json&time=,2w&page=100&access_token=' + accesstoken
-  knex.schema
-    .createTable('tempevents', function (table) {
-      table.string('eventid')
-      table.string('groupid')
-      table.string('groupname', 45)
-      table.string('title', 180)
-      table.text('description')
-      table.text('location').index()
-      table.dateTime('datetime')
-      table.string('status', 45)
-      table.integer('rsvps')
-      table.integer('spotsleft')
-    })
-    .catch(function (err) { console.error(err) })
+    // Using raw due to knex's lack of builtin FULLTEXT index support for MySQL
+  knex.raw('create table `tempevents` (`eventid` varchar(255), `groupid` varchar(255), `groupname` varchar(45), `title` varchar(180), `description` text, `location` text, `datetime` datetime, `status` varchar(45), `rsvps` int, `spotsleft` int, FULLTEXT KEY location (location))')
     .then(getVenues(companies))
-  // TODO: Drop table
+    .catch(function (err) { console.error(err) })
 
+  // Get venue ids for array of companies
   function getVenues (companies) {
-    var zipCode = '97209'
+    var zipCode = '97209' // TODO: Allow variable zip
     var urls
+  // Check if company name length is long enough
+  // (to prevent enormous searches for, eg, 'b')
     var searchcompanies = companies.filter(function (val) {
       return val.length > 2
     })
     if (searchcompanies.length > 0) {
+  // Build a URL for meetup openvenues API to find venueids
       var venueIds = []
       searchcompanies = searchcompanies.join('%2C+')
       searchcompanies.replace(/\s+/g, '+')
       var openVenueUrl = 'https://api.meetup.com/2/open_venues?&sign=true&photo-host=public&time=,2w&format=json&text=' + searchcompanies + '&zip=' + zipCode + '&page=100&access_token=' + accesstoken
+  // Request data and push into venueIds array
       request(openVenueUrl, function (error, response, body) {
         if (!error && response.statusCode === 200) {
           var result = JSON.parse(body)
@@ -202,16 +190,20 @@ router.post('/signup', function (req, res, next) {
             venueIds.push(e.id)
           })
         }
+  // Build URL with venueids to find events at those venues
         var apiVenueIds = venueIds.join('%2C+')
         var venueEventUrl = 'https://api.meetup.com/2/events?&sign=true&photo-host=public&format=json&time=,2w&page=100&venue_id=' + apiVenueIds + '&access_token=' + accesstoken
         urls = [memberEventsUrl, conciergeEventsUrl, venueEventUrl]
         getEvents(urls)
       })
+  // If no companies were entered in the query, just get events for the member and their concierge
     } else {
       urls = [memberEventsUrl, conciergeEventsUrl]
       getEvents(urls)
     }
   }
+
+  // Get events for member, concierge and potentially venue events
   function getEvents (urls) {
     urls.forEach(function (element, index) {
       console.log('getEvents has been called for ------- ', element)
@@ -219,8 +211,8 @@ router.post('/signup', function (req, res, next) {
         if (!error && response.statusCode === 200) {
           var result = JSON.parse(body)
           var length = result.results.length
+  // Build an object from each result
           result.results.forEach(function (e, i) {
-            console.log('--------', i)
             var eventid = e.id
             var groupid = e.group.id
             var groupname = e.group.name
@@ -236,7 +228,7 @@ router.post('/signup', function (req, res, next) {
             var status = e.status
             var rsvps = e.yes_rsvp_count
             var spotsleft = e.rsvp_limit - e.yes_rsvp_count || null
-
+  // Check if result exists in tempevents table
             knex('tempevents')
               .select()
               .where({ eventid })
@@ -244,13 +236,16 @@ router.post('/signup', function (req, res, next) {
                 if (result.length > 0) {
                   console.log('event exists in the temp table')
                   if (index === urls.length - 1 && i === length - 1) {
+  // If event exists and was the last searched event, proceed to get RSVPs for events
                     getRSVPs(false, [])
                   }
                 } else {
+  // If event does not exist, add it
                   knex('tempevents')
                     .insert({ eventid, groupid, groupname, title, description, location, datetime, status, rsvps, spotsleft })
                     .catch(function (err) { console.error(err) })
                     .then(function () {
+  // If event didn't exist and was the last searched event, getRSVPs
                       if (index === 2 && i === length - 1) {
                         getRSVPs(false, [])
                       }
@@ -262,81 +257,72 @@ router.post('/signup', function (req, res, next) {
       })
     })
   }
-  // function getCompanyEvents (companies) {
-  //   var zipCode = '97209'
-  //   var searchcompanies = companies.filter(function (val) {
-  //     return val.length > 2
-  //   })
-  //   if (searchcompanies.length !== 0) {
-  //     searchcompanies = searchcompanies.join('%2C+')
-  //     searchcompanies.replace(/\s+/g, '+')
-  //     var openVenueUrl = 'https://api.meetup.com/2/open_venues?&sign=true&photo-host=public&time=,2w&format=json&text=' + searchcompanies + '&zip=' + zipCode + '&page=100&access_token=' + accesstoken
-  //     var venueIds = []
-  //     console.log('getCompanyEvents has been called for-------', openVenueUrl)
-  //     request(openVenueUrl, function (error, response, body) {
-  //       if (!error && response.statusCode === 200) {
-  //         var result = JSON.parse(body)
-  //         result.results.forEach(function (e, i) {
-  //           venueIds.push(e.id)
-  //         })
-  //       }
-  //       var apiVenueIds = venueIds.join('%2C+')
-  //       var venueEventUrl = 'https://api.meetup.com/2/events?&sign=true&photo-host=public&format=json&time=,2w&page=100&venue_id=' + apiVenueIds + '&access_token=' + accesstoken
-  //       getEvents(venueEventUrl, true)
-  //       console.log('getCompanyEvents has finished-------')
-  //     }
-  //   )
-  //   }
-  // }
-    // Insert group bios into members table
+
+  // Find all memberids RSVPing to all events in tempevents
+  // URL parameter is optional, to specify getting next page of results
+  // rsvps should initially be an empty array, which will get passed back in if there is a next page
   function getRSVPs (url, rsvps) {
+  // Wait every second to avoid API throttling
     setTimeout(function () {
       console.log('getRSVPs has been called-------')
+  // Get eventids from tempevents table
       knex
         .table('tempevents')
         .pluck('eventid')
         .then(function (eids) {
-          console.log('====event ids plucked====', eids)
+  // Build URL from eventids
           var eventids = eids.join('%2C')
           var rsvpurl = url || 'https://api.meetup.com/2/rsvps?&sign=true&photo-host=public&type=json&event_id=' + eventids + '&page=100&access_token=' + accesstoken
+  // Request Meetup RSVPs API for memberids
           request(rsvpurl, function (error, response, body) {
             if (!error && response.statusCode === 200) {
               var result = JSON.parse(body)
-              console.log('===RSVP API RESULT===', result)
               result.results.forEach(function (e, i) {
+  // Build object with memberid and eventid
                 var rsvpsobj = {
                   memberid: e.member.member_id,
                   eventid: e.event.id
                 }
                 rsvps.push(rsvpsobj)
               })
+  // If there are more results, get the next page
               if (result.meta.next !== '') {
                 getRSVPs(result.meta.next, rsvps)
               } else {
+  // Build temprsvps table
                 knex.schema
                   .createTable('temprsvps', function (table) {
                     table.string('eventid')
                     table.integer('memberid')
-                    // TODO: Add more columns if necessary
                   })
                   .catch(function (err) { console.error(err) })
                   .then(function () {
+  // Insert all RSVPs into temprsvps table
                     knex('temprsvps')
                       .insert(rsvps)
                       .catch(function (err) { console.error(err) })
                       .then(function () {
-                        // run getBios
+  // Get memberids from temprsvps table
                         knex('temprsvps')
                           .pluck('memberid')
                           .then(function (tempmembers) {
+  // Get existing memberids from members table
                             knex('members')
                               .pluck('memberid')
                               .then(function (members) {
+  // Remove existing members from search paramaters
                                 var uniquetempmembers = _.uniq(tempmembers)
                                 var differencetempmembers = _.difference(uniquetempmembers, members)
-                                var memberids = differencetempmembers.join('%2C')
-                                var url = 'https://api.meetup.com/2/members?&sign=true&photo-host=public&format=json&member_id=' + memberids + '&page=100&access_token=' + accesstoken
-                                getBios(url)
+  // If there are no new members, skip ahead and search our data for companies
+                                if (differencetempmembers.length === 0) {
+                                  searchCompanies()
+                                } else {
+  // Build URL and get member bios
+                                  searchCompanies()
+                                  var memberids = differencetempmembers.join('%2C')
+                                  var url = 'https://api.meetup.com/2/members?&sign=true&photo-host=public&format=json&member_id=' + memberids + '&page=100&access_token=' + accesstoken
+                                  getBios(url)
+                                }
                               })
                               .catch(function (err) { console.error(err) })
                           })
@@ -351,6 +337,8 @@ router.post('/signup', function (req, res, next) {
   }
 
   function getBios (url) {
+  // Request member bio data via Meetup members API
+    console.log('inside getBios-----')
     request(url, function (error, response, body) {
       var members = []
       var socialmedias = []
@@ -358,6 +346,7 @@ router.post('/signup', function (req, res, next) {
       if (!error && response.statusCode === 200) {
         var membersresult = JSON.parse(body)
         membersresult.results.forEach(function (e, i) {
+  // Build member object
           var imageurl = ''
           if (e.photo) {
             imageurl = e.photo.photo_link || ''
@@ -372,6 +361,7 @@ router.post('/signup', function (req, res, next) {
             alerts: 'OFF'
           }
           var mediaservices = e.other_services
+  // Build social media object
           for (var key in mediaservices) {
             var socialmediaobj = {}
             socialmediaobj.memberid = e.id
@@ -399,6 +389,7 @@ router.post('/signup', function (req, res, next) {
             }
             socialmedias.push(socialmediaobj)
           }
+  // Build topic object
           for (var topic in e.topics) {
             var topicobj = {
               memberid: e.id,
@@ -407,92 +398,56 @@ router.post('/signup', function (req, res, next) {
             topics.push(topicobj)
           }
           members.push(membersobj)
-        })
-        knex('members')
-          .insert(members)
-          .catch(function (err) { console.error(err) })
-          .then(function () {
-            knex('socialmedialinks')
-              .insert(socialmedias)
+  // If loop has finished, insert into members, socialmedialinks and topics tables
+          if (i === membersresult.results.length - 1) {
+            knex('members')
+              .insert(members)
               .catch(function (err) { console.error(err) })
               .then(function () {
-                knex('topics')
-                  .insert(topics)
+                knex('socialmedialinks')
+                  .insert(socialmedias)
                   .catch(function (err) { console.error(err) })
+                  .then(function () {
+                    knex('topics')
+                      .insert(topics)
+                      .catch(function (err) { console.error(err) })
+                  })
               })
-          })
-        if (membersresult.meta.next !== '') {
-          getBios(membersresult.meta.next)
-          console.log('requesting next group bio...')
-        } else {
-          console.log('getBios has finished====')
-          knex('members')
-            .pluck('memberid')
-            .then(function (members) {
-              members.forEach(function (e, i) {
-                setTimeout((function (x) {
-                  return function () { getGroupBios(e, accesstoken, []) }
-                })(i), 10000 * i)
-                setTimeout(searchCompanies(), 10000 * i)
-              })
-            })
-            .catch(function (err) { console.error(err) })
-        }
+  // If there is another page of results, run getBios with the next page
+            if (membersresult.meta.next !== '') {
+              getBios(membersresult.meta.next)
+            } else {
+  // Find all members without meetupgroupbios and run each through getGroupBios
+  // Set a 10 second interval. 5 seconds was too frequent but another may be faster
+              console.log('getBios has finished====')
+              knex('members')
+                .pluck('memberid')
+                .whereNull('meetupgroupbios')
+                .then(function (members) {
+                  members.forEach(function (e, i) {
+                    setTimeout((function (x) {
+                      return function () { getGroupBios(e, accesstoken, []) }
+                    })(i), 10000 * i)
+                  })
+                  // setTimeout(searchCompanies(), 10000 * members.length)
+                })
+                .catch(function (err) { console.error(err) })
+            }
+          }
+        })
       }
     })
   }
+
+  // Search db data for matches of current user's company
   function searchCompanies () {
-    knex('searches')
-      .select()
-      .where('memberid', req.user.memberid)
-      .then(function (result) {
-        console.log('search companies:', result)
-      })
-    // knex
-    //   .pluck('memberid')
-    //   .from('members')
-    //   .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', company)
-    //   .then(function (matches) {
-    //     console.log(matches)
-    //     // addTempRsvpMatches(matches, company, memberid)
-    //   })
-  }
-
-  function addTempRsvpMatches (matches, company, memberid) {
-
-  }
-  res.redirect('/')
-})
-
-router.get('/testing', function (req, res, next) {
-  // We need:
-  // Search Results table:
-  // {
-  //   eventid: '',
-  // XXX   searchuid: '',
-  // XXX  searchmemberid: '',
-  //   rsvpstatus: '',
-  //   companymatch: '',
-  //   employeematch: '',
-  //   status: ''
-  // }
-  // Events table (unique only):
-  // {
-  //  groupid:
-  //  groupname:
-  //  title:
-  //  description:
-  //  location:
-  //  datetime:
-  //  rsvps:
-  //  spotsleft:
-  // }
-  var memberid = 188525180 // TODO: replace with req.user.memberid
-  function searchCompanies () {
+    console.log('searching companies...')
+  // Retrieve member's search companies from searches table
     knex('searches')
       .select()
       .where('memberid', memberid)
       .then(function (result) {
+  // Create tempcompanymatches and temprsvpmatches tables
         knex.schema
           .createTable('tempcompanymatches', function (table) {
             table.integer('memberid')
@@ -508,59 +463,76 @@ router.get('/testing', function (req, res, next) {
           })
           .catch(function (err) { console.error(err) })
           .then(function () {
+  // Using the three companies result, search the members and events tables for matching text
+            var rsvpmatches = []
+            var companymatches = []
             result.forEach(function (e, i) {
-              knex
-                .pluck('memberid')
-                .from('members')
-                .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', e.searchcompany)
-                .then(function (matches) {
-                  addTempRsvpMatches(matches, e.uid, memberid)
-                })
               knex
                 .pluck('eventid')
                 .from('tempevents')
                 .orWhereRaw('MATCH(location) AGAINST(? IN BOOLEAN MODE)', e.searchcompany)
                 .then(function (eventids) {
-                  addTempCompanyMatches(eventids, e.uid)
+  // Build a tempcompanymatch object for each matching result
+                  eventids.forEach(function (elem, ind) {
+                    var tempcompanymatch = {
+                      eventid: elem,
+                      searchuid: e.uid
+                    }
+                    companymatches.push(tempcompanymatch)
+                    if (ind === eventids.length - 1 && i === result.length - 1) {
+  // Call function when all results added
+                      addTempCompanyMatches(companymatches)
+  // Search through member bios with same three companies
+                      result.forEach(function (element, index) {
+                        knex
+                          .pluck('memberid')
+                          .from('members')
+                          .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', e.searchcompany)
+                          .then(function (memberids) {
+  // Remove current user from member matches
+                            var differencememberids = _.difference(memberids, [memberid])
+                            differencememberids.forEach(function (l, n) {
+                              var temprsvpmatch = {
+                                memberid: l.memberid,
+                                searchuid: element.uid
+                              }
+                              rsvpmatches.push(temprsvpmatch)
+                              if (l === memberids.length - 1 && index === result.length) {
+                                addTempRsvpMatches(rsvpmatches)
+                              }
+                            })
+                          })
+                      })
+                    }
+                  })
                 })
             })
           })
       })
   }
 
-  function addTempCompanyMatches (eventids, searchuid) {
-    var tempcompanymatches = []
-    eventids.forEach(function (e, i) {
-      var tempcompanymatch = {
-        eventid: e,
-        searchuid
-      }
-      tempcompanymatches.push(tempcompanymatch)
-      if (i === eventids.length - 1) {
-        knex('tempcompanymatches')
-          .insert(tempcompanymatches)
-          .catch(function (err) { console.error(err) })
-      }
-    })
+  function addTempCompanyMatches (tempcompanymatches) {
+    knex('tempcompanymatches')
+      .insert(tempcompanymatches)
+      .catch(function (err) { console.error(err) })
   }
 
-  function addTempRsvpMatches (matches, searchuid, memberid) {
+  function addTempRsvpMatches (rsvpmatches) {
     var temprsvpmatches = []
-    var differencematches = _.difference(matches, [memberid])
-    differencematches.forEach(function (e, i) {
+    rsvpmatches.forEach(function (e, i) {
+  // Find each matched member in the temprsvps table
       knex('temprsvps')
-        .where('memberid', e)
+        .where('memberid', e.memberid)
         .distinct('eventid', 'memberid') // Added due to data repetition in temprsvps. shouldn't be necessary
-        .then(function (result) {
-          console.log('result of temprsvpmatches==', result)
-          result.forEach(function (ele, ind) {
-            var temprsvpmatch = {
-              memberid: ele.memberid,
-              searchuid,
-              eventid: ele.eventid
-            }
-            temprsvpmatches.push(temprsvpmatch)
-            if (i === differencematches.length - 1 && ind === result.length - 1) {
+        .then(function (memberrsvps) {
+          console.log('result of temprsvpmatches==', memberrsvps)
+          memberrsvps.forEach(function (y, z) {
+  // Add eventid property based on temprsvps table
+            var onersvp = e
+            onersvp.eventid = y.eventid
+            temprsvpmatches.push(onersvp)
+  // If last, insert into temprsvpmatches table
+            if (i === rsvpmatches.length - 1 && z === memberrsvps.length - 1) {
               knex('temprsvpmatches')
                 .insert(temprsvpmatches)
                 .catch(function (err) { console.error(err) })
@@ -571,8 +543,11 @@ router.get('/testing', function (req, res, next) {
         .catch(function (err) { console.error(err) })
     })
   }
+
+  // Perform a union of temprsvpmatches and tempcompanymatches tables
   function unionTempMatches () {
     console.log('unionTempMatches is beginning')
+  // Unite temprsvpmatches and tempcompanymatches
     knex
       .select('memberid', 'searchuid', 'eventid')
       .from('temprsvpmatches')
@@ -580,32 +555,37 @@ router.get('/testing', function (req, res, next) {
         this.select('memberid', 'searchuid', 'eventid')
         .from('tempcompanymatches')
         .then(function (results) {
+          // NOTE: You don't get the desired results in this promise. Check the one below
           console.log('union complete')
         })
         .catch(function (err) { console.error(err) })
       })
       .then(function (results) {
         console.log('Expecting all four results here: ', results)
-        // Add to events table
+  // Add results to events table
         addMatchEvents(results)
-        // Add to searchresults table
       })
       .catch(function (err) { console.error(err) })
   }
+
+  // Add relevant matched events to the events table
   function addMatchEvents (results) {
     var events = []
     results.forEach(function (e, i) {
+  // Pull event from events table
       knex('tempevents')
         .where('eventid', e.eventid)
         .then(function (event) {
           events.push(event[0])
           if (i === results.length - 1) {
+  // Remove any duplicate events, eg, company and employee match
             var uniqueevents = _.uniq(events, 'eventid')
             knex('events')
               .insert(uniqueevents)
               .catch(function (err) { console.error(err) })
               .then(function () {
                 console.log('events added to events table')
+  // Pass united temp matches into addSearchResults
                 addSearchResults(results)
               })
           }
@@ -613,6 +593,7 @@ router.get('/testing', function (req, res, next) {
     })
   }
 
+  // Populate search results table with relevant matched events
   function addSearchResults (searchresults) {
     console.log('adding search results')
     var tempresults = []
@@ -682,6 +663,7 @@ router.get('/testing', function (req, res, next) {
                   .insert(finals)
                   .then(function () {
                     console.log('search results added!')
+  // 6. Pass matched events into searchresults
                     addRsvps(searchresults)
                   })
                   .catch(function (err) { console.error(err) })
@@ -692,34 +674,70 @@ router.get('/testing', function (req, res, next) {
     })
   }
 
+  // Add to rsvps table for matched events
   function addRsvps (searchresults) {
+  // Remove any company venue matches from results
+    searchresults = searchresults.filter(function (value) {
+      return value.memberid ? value : false
+    })
+  // Get searchresultuid from searchresults table
     searchresults.forEach(function (e, i) {
       console.log('searchresult in rsvp: ', e)
-      if (e.memberid) {
-        knex('searchresults')
-          .where({
-            searchuid: e.searchuid,
-            eventid: e.eventid
-          })
-          .then(function (result) {
-            console.log('we got an rsvp result! : ', result)
-            console.log('result.uid: %s  e.memberid: %s', result.uid, e.memberid)
-            knex('rsvps')
-              .insert({
-                searchresultuid: result[0].uid,
-                rsvpmemberid: e.memberid
-              })
-              .catch(function (err) { console.error(err) })
-              .then(function () {
-                console.log('DONE! ♪┏(・o･)┛♪┗ ( ･o･) ┓♪')
-              })
-          })
-      }
+      knex('searchresults')
+        .where({
+          searchuid: e.searchuid,
+          eventid: e.eventid
+        })
+        .then(function (result) {
+          console.log('we got an rsvp result! : ', result)
+          console.log('result.uid: %s  e.memberid: %s', result.uid, e.memberid)
+  // Insert into RSVPs table
+          knex('rsvps')
+            .insert({
+              searchresultuid: result[0].uid,
+              rsvpmemberid: e.memberid
+            })
+            .catch(function (err) { console.error(err) })
+            .then(function () {
+  // Db tasks finished, drop temp tables
+              console.log('DONE! ♪┏(・o･)┛♪┗ ( ･o･) ┓♪')
+              removeTempTables()
+            })
+        })
     })
   }
-  searchCompanies()
+  // Drop all temp tables
+  function removeTempTables () {
+    knex.schema.dropTable('tempcompanymatches')
+    knex.schema.dropTable('tempevents')
+    knex.schema.dropTable('temprsvpmatches')
+    knex.schema.dropTable('temprsvps')
+  }
+  // Send to dashboard
+  res.redirect('/')
+})
+
+router.get('/testing', function (req, res, next) {
+  var testevent = {
+    eventid: 1,
+    groupid: 1,
+    groupname: 'testersRus',
+    title: 'Testing',
+    description: 'Something',
+    status: 'Upcoming'
+  }
+  console.log(testevent)
+  knex.raw("insert into `events` (`description`, `eventid`, `groupid`, `groupname`, `status`, `title`) values ('A new thing entirely', 1, 1, 'testersRus', 'Upcoming', 'Testing') ON DUPLICATE KEY UPDATE ('A new thing entirely', 1, 1, 'testersRus', 'Upcoming', 'Testing')")
+  // knex
+  //   .insert(testevent)
+  //   .table(knex.raw('`events` ON DUPLICATE KEY UPDATE'))
+  //   .catch(function (err) { console.error(err) })
   res.send('Check your logs')
 })
+
+// router.get('/refresh', function (req, res, next) {
+//   searchCompanies()
+// })
 
 /* GET searchresults data for the dashboard. */
 router.get('/searchresults', function (req, res, next) {
