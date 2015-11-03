@@ -110,69 +110,65 @@ passport.use(new MeetupStrategy({
   // callbackURL: '/'
 },
   function (token, tokenSecret, profile, done) {
-    // asynchronous verification, for effect...
-    process.nextTick(function () {
-      knex.select().from('members').where('memberid', profile.id)
-        .then(function (result) {
-          if (result[0] === undefined) {
-            // Sign up route
-            console.log('----Signing up new user----')
-            // User has not been searched or signed up
-            // Add a user to the db
-            var newUser = buildUser(profile, token, 1) // where 1 is the user type, tbd
-            console.log('new user, ==', newUser)
-            knex('members')
-              .insert(newUser)
-              .catch(function (err) { console.log(err) })
-              .done(function () {
-                // Add topics to db
-                addTopics(profile)
-                addSocialMediaLinks(profile)
-              })
-            // Return user from our db...
-            return done(null, newUser)
-          } else if (result[0].usertypeid < 3) {
-            // Log in route
-            // User has previously signed up
-            // Return existing user
-            knex('members')
-              .where('memberid', result[0].memberid)
-              .update('accesstoken', token)
-              .catch(function (err) { console.log(err) })
-              .done(function () {
-                var newtokenresult = result[0]
-                newtokenresult.accesstoken = token
-                return done(null, newtokenresult)
-              })
-          } else {
-            // Log in route for searched users
-            // Modify previously searched user
-            knex('members')
-              .update({
-                alerts: 'ON',
-                accesstoken: token,
-                usertypeid: 1 // where 1 is the user type, tbd
-              })
-              .where('memberid', profile.id)
-              .then(function () {
-                knex.select().from('members').where('memberid', profile.id)
-                  .then(function (res) {
-                    return done(null, result[0])
-                  }).catch(function (err) { console.log(err) })
-              })
-              .catch(function (err) { console.log(err) })
-          }
-        })
-        .catch(function (err) { console.log(err) })
-      // To keep the example simple, the user's Meetup profile is returned to
-      // represent the logged-in user. In a typical application, you would want
-      // to associate the Meetup account with a user record in your database,
-      // and return that user instead.
-      // console.log('profile===>', profile)
-      // return done(null, profile)
-    })
-  }
-))
+    knex.select().from('members').where('memberid', profile.id)
+      .then(function (result) {
+        if (result[0] === undefined) {
+          // Sign up route
+          console.log('----Signing up new user----')
+          // User has not been searched or signed up
+          // Add a user to the db
+          var newUser = buildUser(profile, token, 1) // where 1 is the user type, tbd
+          knex('members')
+            .insert(newUser)
+            .catch(function (err) { console.log(err) })
+            .then(function () {
+              // Add topics to db
+              addTopics(profile)
+              addSocialMediaLinks(profile)
+            })
+          // Return user from our db...
+          return done(null, newUser)
+        } else if (result[0].usertypeid < 3) {
+          // Log in route
+          // User has previously signed up
+          // Return existing user
+          knex('members')
+            .where('memberid', result[0].memberid)
+            .update('accesstoken', token)
+            .catch(function (err) { console.log(err) })
+            .done(function () {
+              var newtokenresult = result[0]
+              newtokenresult.accesstoken = token
+              return done(null, newtokenresult)
+            })
+        } else {
+          // Log in route for searched users
+          // Modify previously searched user
+          knex('members')
+            .update({
+              alerts: 'ON',
+              accesstoken: token,
+              usertypeid: 1 // where 1 is the user type, tbd
+            })
+            .where('memberid', profile.id)
+            .then(function () {
+              knex.select().from('members').where('memberid', profile.id)
+                .then(function (res) {
+                  return done(null, result[0])
+                }).catch(function (err) { console.log(err) })
+            })
+            .catch(function (err) { console.log(err) })
+        }
+      })
+      .catch(function (err) { console.log(err) })
+    // To keep the example simple, the user's Meetup profile is returned to
+    // represent the logged-in user. In a typical application, you would want
+    // to associate the Meetup account with a user record in your database,
+    // and return that user instead.
+    // console.log('profile===>', profile)
+    // return done(null, profile)
+  })
+)
 
 passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
@@ -182,20 +178,15 @@ passport.use(new LinkedInStrategy({
   passReqToCallback: true
 },
   function (req, token, tokenSecret, profile, done) {
-    process.nextTick(function () {
-      // TODO: Add LinkedIn profile to socialmedialinks db
-      // ...
-      // Paste LinkedIn data onto user for auto-fill of signup form
-      // TODO: Remove pasted data on form submit
-      var addLinkedIn = req.user
-      addLinkedIn.linkedIn = profile
-      return done(null, addLinkedIn)
-    })
-    // User.findOrCreate({ linkedinId: profile.id }, function (err, user) {
-    //   return done(err, user);
-    // })
-  }
-))
+    // TODO: Add LinkedIn profile to socialmedialinks db
+    // ...
+    // Paste LinkedIn data onto user for auto-fill of signup form
+    // TODO: Remove pasted data on form submit
+    var addLinkedIn = req.user
+    addLinkedIn.linkedIn = profile
+    return done(null, addLinkedIn)
+  })
+)
 
 // ----------------------------------------------------------------------------
 // 2. Routes
