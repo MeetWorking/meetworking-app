@@ -23,6 +23,7 @@ var SearchResultModel = Backbone.Model.extend({
     searchuids: []
   },
   initialize: function () {
+    console.log('new SearchResultModel')
 		// run queries that will add properties to each model instance which represents the count of members attending an event that work for a saved search company
 		// update searchuids property with an array of objects that each contain searchuid, searchmemberid, rsvpstatus, companymatch, employeematch, searchcompany, and logourl
   }
@@ -32,6 +33,7 @@ var SearchResultCollection = Backbone.Collection.extend({
   model: SearchResultModel,
   url: '/searchresults',
   initialize: function () {
-    // this.fetch()
+    console.log('new SearchResultCollection')
+    this.fetch()
   }
 })
