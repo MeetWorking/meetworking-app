@@ -125,9 +125,9 @@ passport.use(new MeetupStrategy({
               // Add topics to db
               addTopics(profile)
               addSocialMediaLinks(profile)
+              // Return user from our db...
+              return done(null, newUser)
             })
-          // Return user from our db...
-          return done(null, newUser)
         } else if (result[0].usertypeid < 3) {
           // Log in route
           // User has previously signed up

@@ -56,6 +56,7 @@ var GUI = (function () {
     render: function () {
       this.$el.html('<h1>Events</h1>')
       this.container.append(this.$el)
+      console.log('DashboardView rendered')
     },
     initialize: function (opts) {
       _.extend(this, opts) // if (opts) {this.container = opts.container}
@@ -69,9 +70,16 @@ var GUI = (function () {
           container: self.$el
         })
       })
+      this.listenTo(this.collection, 'add', this.addSearchResultView)
     },
     events: {
       //
+    },
+    addSearchResultView: function (model) {
+      var searchResult = new SearchResultView({
+        model: model,
+        container: this.$el
+      })
     }
   })
 

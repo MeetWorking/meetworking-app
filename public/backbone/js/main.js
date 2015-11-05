@@ -101,6 +101,6 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var searchResults = new SearchResultCollection(sample)
+  var searchResults = new SearchResultCollection()
   var dashboard = new GUI(searchResults, '.backbone')
 })
