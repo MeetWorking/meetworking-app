@@ -96,19 +96,81 @@ router.get('/searchresults', function (req, res, next) {
   var memberid = 188525180 // req.user.memberid
   var searchResults = []
   console.log(memberid)
-  // SELECT *
-  // FROM `searchresults`
-  // INNER JOIN `events` on searchresults.eventid = events.eventid
-  // WHERE `searchresults`.`eventid` = 'vdzcjlytpbwb'
-  // AND `searchresults`.`searchmemberid` = 188525180;
+  // Mitch functions:
   knex
+    .select('searchresults.uid', 'searchresults.eventid', 'searchresults.searchuid', 'searchresults.searchmemberid', 'searchresults.rsvpstatus', 'searchresults.companymatch', 'searchresults.employeematch', 'searches.searchcompany', 'searches.logourl', 'events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.status as displaystatus')
     .from('searchresults')
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
+    .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
     .where('searchmemberid', memberid)
     .catch(function (err) { console.error(err) })
     .then(function (result) {
       console.log(result)
+      result.forEach(function (e) {
+        searchResults.push({
+          id: e.uid,
+          eventid: e.eventid,
+          groupid: e.groupid,
+          groupname: e.groupname,
+          title: e.title,
+          description: e.description,
+          location: e.location,
+          datetime: e.datetime,
+          status: e.status,
+          rsvps: e.rsvps,
+          spotsleft: e.spotsleft,
+          meetworkers: e.meetworkers,
+          recruiters: e.recruiters,
+          displaystatus: e.status,
+          searchuids: [
+            {
+              searchuid: '',
+              searchmemberid: '',
+              rsvpstatus: '',
+              companymatch: '',
+              employeematch: '',
+              searchcompany: '',
+              logourl: ''
+            }
+          ]
+        })
+      })
     })
+
+  // Jeff Spreadsheet functions:
+  // knex('searchresults')
+  //   .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.status as displaystatus')
+  //   .select()
+  //   .innerJoin('events', 'searchresults.eventid', 'events.eventid')
+  //   .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
+  //   .where({
+  //     'searchresults.searchmemberid': memberid,
+  //     'searches.memberid': memberid
+  //   })
+  //   .then(function (result1) {
+  //     knex('searchresults')
+  //       .distinct('searchresults.uid', 'searchresults.eventid', 'searchresults.searchuid', 'searchresults.searchmemberid', 'searchresults.rsvpstatus', 'searchresults.companymatch', 'searchresults.employeematch', 'searches.searchcompany', 'searches.logourl')
+  //       .select()
+  //       .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
+  //       .where({
+  //         'searchresults.searchmemberid': memberid,
+  //         'searches.memberid': memberid
+  //       })
+  //       .then(function (result2) {
+  //         var newResult2 = result2.filter(function (element, index, array) {
+  //           return ('searchresults.eventid' in element && element['searchresults.eventid'] === [EVENTID])
+  //         })
+  //         newResult2 = newResult2.map(function (element, index, array) {
+  //           var object = {}
+  //           for (var key in element) {
+  //             if (key !== 'searchresults.uid' && key !== 'searchresults.eventid') {
+  //               object[key] = element[key]
+  //             }
+  //           }
+  //           return object
+  //         })
+  //       })
+  //   })
   // each item in the array needs to be an object
     // {
     //   id: '',
@@ -127,13 +189,13 @@ router.get('/searchresults', function (req, res, next) {
     //   displaystatus: '',
     //   searchuids: [
     //   {
-      // searchuid: ,
-      // searchmemberid: ,
-      // rsvpstatus: '',
-      // companymatch: ,
-      // employeematch: ,
-      // searchcompany: '',
-      // logourl: ''
+    //   searchuid: ,
+    //   searchmemberid: ,
+    //   rsvpstatus: '',
+    //   companymatch: ,
+    //   employeematch: ,
+    //   searchcompany: '',
+    //   logourl: ''
     // }]
     // }
   // Use SQL queries via the knex module to find all data relevant to events tied to the user's memberid and saved search companies
