@@ -1,4 +1,5 @@
 /* globals Backbone, $, _ */
+var moment = require('moment')
 
 var GUI = (function () {
   var SearchResultView = Backbone.View.extend({
@@ -7,13 +8,13 @@ var GUI = (function () {
     render: function () {
       this.$el.attr('style', 'margin-top: 50px')
 
-      var date = this.model.get('datetime').slice(0, 10)
+      var date = moment(this.model.get('datetime')).format('dddd, MMMM D')
       var $date = $('<h2>').text(date)
 
       var $card = $('<div style="border: 1px solid black">')
       //
       var $cardLeft = $('<div style="width: 20%; float: left; padding-right: 2%">')
-      var time = this.model.get('datetime').slice(11)
+      var time = moment(this.model.get('datetime')).format('h:mm A')
       var $time = $('<h3>').text(time)
       $cardLeft.append($time)
       //

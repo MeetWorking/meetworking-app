@@ -2,7 +2,6 @@ var express = require('express')
 var router = express.Router()
 var request = require('request')
 var _ = require('lodash')
-var moment = require('moment')
 
 // ----------------------------------------------------------------------------
 // 1. Knex setup
@@ -27,6 +26,7 @@ router.get('/', function (req, res, next) {
 router.get('/signup', function (req, res, next) {
   // Get member from members table
   var currentuser = req.user.memberid || req.user.id
+
   knex.select().from('members').where('memberid', currentuser)
     .then(function (result) {
       // test if they have filled in company (if they have seen the signup form before)
@@ -263,7 +263,7 @@ function addGroupBios (memberid, meetupgroupbios) {
 function startSearch (companies, memberid, accesstoken) {
   console.log('startSearch')
   // Using raw due to knex's lack of builtin FULLTEXT index support for MySQL
-  knex.raw('create table `tempevents` (`eventid` varchar(255), `groupid` varchar(255), `groupname` varchar(45), `title` varchar(180), `description` text, `location` text, `datetime` bigint, `status` varchar(45), `rsvps` int, `spotsleft` int, FULLTEXT KEY location (location))')
+  knex.raw('create table tempevents' + memberid + ' (`eventid` varchar(255), `groupid` varchar(255), `groupname` varchar(45), `title` varchar(180), `description` text, `location` text, `datetime` bigint, `status` varchar(45), `rsvps` int, `spotsleft` int, FULLTEXT KEY location (location))')
     .then(getVenues(companies, memberid, accesstoken))
     .catch(function (err) { console.error(err) })
 } // End startSearch
@@ -349,12 +349,12 @@ function getEvents (urls, tempevents, memberid, accesstoken) {
               console.log('===+++&&&+++===')
   // Once all loops are finished, add tempevents
               var finaltempevents = _.uniq(tempevents, 'eventid')
-              knex('tempevents')
+              knex('tempevents' + memberid)
                 .insert(finaltempevents)
                 .catch(function (err) { console.error(err) })
                 .then(function () {
                   knex
-                    .table('tempevents')
+                    .table('tempevents' + memberid)
                     .pluck('eventid')
                     .distinct('eventid')
                     .then(function (eids) {
@@ -404,14 +404,14 @@ function getRSVPs (rsvpurl, rsvps, memberid) {
         } else {
   // Build temprsvps table
           knex.schema
-            .createTable('temprsvps', function (table) {
+            .createTable('temprsvps' + memberid, function (table) {
               table.string('eventid')
               table.integer('memberid')
             })
             .catch(function (err) { console.error(err) })
             .then(function () {
   // Insert all RSVPs into temprsvps table
-              knex('temprsvps')
+              knex('temprsvps' + memberid)
                 .insert(rsvps)
                 .catch(function (err) { console.error(err) })
                 .then(function () {
@@ -437,14 +437,14 @@ function searchCompanies (memberid) {
     .then(function (result) {
   // Create tempcompanymatches and temprsvpmatches tables
       knex.schema
-        .createTable('tempcompanymatches', function (table) {
+        .createTable('tempcompanymatches' + memberid, function (table) {
           table.integer('memberid')
           table.integer('searchuid')
           table.string('eventid')
         })
         .catch(function (err) { console.error(err) })
       knex.schema
-        .createTable('temprsvpmatches', function (table) {
+        .createTable('temprsvpmatches' + memberid, function (table) {
           table.integer('memberid')
           table.integer('searchuid')
           table.string('eventid')
@@ -459,7 +459,7 @@ function searchCompanies (memberid) {
           result.forEach(function (e) {
             knex
               .pluck('eventid')
-              .from('tempevents')
+              .from('tempevents' + memberid)
               .orWhereRaw('MATCH(location) AGAINST(? IN BOOLEAN MODE)', e.searchcompany)
               .then(function (eventids) {
   // Build a tempcompanymatch object for each matching result
@@ -475,7 +475,7 @@ function searchCompanies (memberid) {
                 i--
                 if (ind === 0 && i === 0) {
   // Call function when all results added
-                  addTempCompanyMatches(companymatches)
+                  addTempCompanyMatches(memberid, companymatches)
                 }
               })
           })
@@ -513,9 +513,9 @@ function searchCompanies (memberid) {
  * Called by searchCompanies
  * @param {array} tempcompanymatches - Array of matched data from tempevents table
  */
-function addTempCompanyMatches (tempcompanymatches) {
+function addTempCompanyMatches (memberid, tempcompanymatches) {
   console.log('addTempCompanyMatches')
-  knex('tempcompanymatches')
+  knex('tempcompanymatches' + memberid)
     .insert(tempcompanymatches)
     .catch(function (err) { console.error(err) })
 } // End addTempCompanyMatches
@@ -532,7 +532,7 @@ function addTempRsvpMatches (rsvpmatches, memberid) {
   var i = rsvpmatches.length
   rsvpmatches.forEach(function (e) {
   // Find each matched member in the temprsvps table
-    knex('temprsvps')
+    knex('temprsvps' + memberid)
       .where('memberid', e.memberid)
       .distinct('eventid', 'memberid') // Added due to data repetition in temprsvps. shouldn't be necessary
       .then(function (memberrsvps) {
@@ -551,7 +551,7 @@ function addTempRsvpMatches (rsvpmatches, memberid) {
         i--
         if (i === 0 && z === 0) {
   // If last, insert into temprsvpmatches table
-          knex('temprsvpmatches')
+          knex('temprsvpmatches' + memberid)
             .insert(temprsvpmatches)
             .catch(function (err) { console.error(err) })
             .then(function () {
@@ -573,10 +573,10 @@ function unionTempMatches (memberid) {
   // Unite temprsvpmatches and tempcompanymatches
   knex
     .select('memberid', 'searchuid', 'eventid')
-    .from('temprsvpmatches')
+    .from('temprsvpmatches' + memberid)
     .union(function () {
       this.select('memberid', 'searchuid', 'eventid')
-      .from('tempcompanymatches')
+      .from('tempcompanymatches' + memberid)
       .then(function (results) {
         // NOTE: You don't get the desired results in this promise. Check the one below
       })
@@ -609,7 +609,7 @@ function addMatchEvents (results, memberid) {
       var i = finalEvents.length
       finalEvents.forEach(function (e) {
   // Pull event from tempevents table
-        knex('tempevents')
+        knex('tempevents' + memberid)
           .where('eventid', e.eventid)
           .then(function (event) {
             events.push(event[0])
@@ -663,7 +663,7 @@ function addSearchResults (searchresults, memberid) {
         }
 
   // 2. Check if member is attending
-        knex('temprsvps')
+        knex('temprsvps' + memberid)
           .where({
             memberid,
             eventid: e.eventid
@@ -719,7 +719,7 @@ function addSearchResults (searchresults, memberid) {
                     .insert(finals)
                     .then(function () {
   // 6. Pass matched events into searchresults
-                      addRsvps(searchresults)
+                      addRsvps(memberid, searchresults)
                     })
                     .catch(function (err) { console.error(err) })
                 }
@@ -735,7 +735,7 @@ function addSearchResults (searchresults, memberid) {
  * Called by addSearchResults.
  * @param {array} searchresults - Array of objects that matched search
  */
-function addRsvps (searchresults) {
+function addRsvps (memberid, searchresults) {
   console.log('addRsvps')
   // Remove any company venue matches from results
   var membersearchresults = searchresults.filter(function (value) {
@@ -766,7 +766,7 @@ function addRsvps (searchresults) {
             .catch(function (err) { console.error(err) })
             .then(function () {
   // Db tasks finished, drop temp tables
-              removeTempTables()
+              removeTempTables(memberid)
             })
         }
       })
@@ -777,10 +777,10 @@ function addRsvps (searchresults) {
  * Drop all temp tables.
  * Called by addRsvps
  */
-function removeTempTables () {
+function removeTempTables (memberid) {
   console.log('removeTempTables')
   knex
-    .raw('drop table tempevents, temprsvps, temprsvpmatches, tempcompanymatches;')
+    .raw('drop table tempevents' + memberid + ', temprsvps' + memberid + ', temprsvpmatches' + memberid + ', tempcompanymatches' + memberid + ';')
     .catch(function (err) { console.error(err) })
     .then(function () {
       console.log('DONE! ♪┏(・o･)┛♪┗ ( ･o･) ┓♪')
