@@ -1,5 +1,4 @@
 /* globals Backbone, $, _ */
-var moment = require('moment')
 
 var GUI = (function () {
   var SearchResultView = Backbone.View.extend({
