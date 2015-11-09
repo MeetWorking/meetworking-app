@@ -1,4 +1,4 @@
-/* globals Backbone, $, _ */
+/* globals Backbone, $, _, moment */
 
 var GUI = (function () {
   var SearchResultView = Backbone.View.extend({
@@ -7,13 +7,14 @@ var GUI = (function () {
     render: function () {
       this.$el.attr('style', 'margin-top: 50px')
 
-      var date = this.model.get('datetime').slice(0, 10)
+      var myDate = moment(this.model.get('datetime'))
+      var date = myDate.format('dddd, MMMM D') // this.model.get('datetime').slice(0, 10)
       var $date = $('<h2>').text(date)
 
       var $card = $('<div style="border: 1px solid black">')
       //
       var $cardLeft = $('<div style="width: 20%; float: left; padding-right: 2%">')
-      var time = this.model.get('datetime').slice(11)
+      var time = myDate.format('h:mm A') // this.model.get('datetime').slice(11)
       var $time = $('<h3>').text(time)
       $cardLeft.append($time)
       //
@@ -27,7 +28,7 @@ var GUI = (function () {
       var $location = $('<div style="height: 50px">').html('<h3>@ ' + this.model.get('location') + '</h3>')
       $divLeft.append($location)
       var $divRight = $('<div style="margin-left: 2%; width: 32%; float: left">')
-      var $rsvpButton = $('<input type="button" value="RSVP" style="height: 50px; width: 45%">')
+      var $rsvpButton = $('<input type="button" id="rsvp" value="RSVP" style="height: 50px; width: 45%">')
       var $spots = $('<div style="text-align: center; padding-top: 10px; width: 45%">').html('<p style="font-size: 1.25rem">' + this.model.get('spotsleft') + ' spots left</p>')
       $divRight.append($rsvpButton).append($spots)
       $div.append($divLeft).append($divRight)
@@ -46,7 +47,11 @@ var GUI = (function () {
       this.render()
     },
     events: {
-      //
+      'click #rsvp': 'changeRSVP'
+    },
+    changeRSVP: function () {
+      console.log('changeRSVP in view')
+      this.model.changeRSVP()
     }
   })
 

@@ -1,8 +1,8 @@
+'use strict'
 var express = require('express')
 var router = express.Router()
 var request = require('request')
 var _ = require('lodash')
-var moment = require('moment')
 
 // ----------------------------------------------------------------------------
 // 1. Knex setup
@@ -17,7 +17,11 @@ var knex = require('knex')(config.AWS)
 /* GET landing page. */
 router.get('/', function (req, res, next) {
   if (req.user) { // Determine if user is currently logged in
-    res.render('dashboard', { title: 'Dashboard', user: req.user })
+    knex('searches')
+      .where('memberid', req.user.memberid)
+      .then(function (result) {
+        res.render('dashboard', { title: 'Dashboard', user: req.user, companies: result })
+      })
   } else {
     res.render('index', { title: 'MeetWorking' })
   }
@@ -98,7 +102,7 @@ router.get('/searchresults', function (req, res, next) {
   var memberid = req.user.memberid
   // Jeff Spreadsheet functions:
   knex('searchresults')
-    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.status as displaystatus')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
     .select()
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
@@ -132,10 +136,61 @@ router.get('/searchresults', function (req, res, next) {
             })
             result1[i].searchuids = newResult2
           })
+          result1.sort(function (a, b) {
+            return a.datetime - b.datetime
+          })
           res.send(result1)
         })
     })
   // Use SQL queries via the knex module to find all data relevant to events tied to the user's memberid and saved search companies
+})
+
+router.post('/searchresults', function (req, res, next) {
+  var accesstoken = req.user.accesstoken
+  var rsvp = 'no'
+  if (req.body.rsvpstatus === 'Attending') {
+    rsvp = 'yes'
+  }
+  var rsvpurl = 'https://api.meetup.com/2/rsvp/?event_id=' + req.body.eventid + '&rsvp=' + rsvp + '&sign=true&format=json&access_token=' + accesstoken
+  request.post(rsvpurl,
+    function (error, response, body) {
+      console.log('response.statusCode==>', response.statusCode)
+      if (!error && response.statusCode === 400) {
+        console.log('Prompting join modal')
+        // Member is not yet a member of said meetup group, prompt a join modal
+        knex('searches')
+          .where('memberid', req.user.memberid)
+          .then(function (result) {
+            res.render('dashboard', { title: 'Dashboard', user: req.user, companies: result, newgroup: req.body.groupid })
+          })
+      } else if (!error && response.statusCode === 201) {
+        console.log('Updating db with new RSVP')
+        // Successfully rsvped. Update DB
+        var errrsvpresult = JSON.parse(body)
+        console.log('body: ', errrsvpresult)
+      } else {
+        console.log('Error, sending to meetup')
+        // There was an error. Prompt modal to send to meetup event page
+      }
+    }
+  )
+})
+
+router.get('/joinandrsvp/:gid', function (req, res, next) {
+  res.status(404)
+  // if (req.user) { // Determine if user is currently logged in
+  //   knex('searches')
+  //     .where('memberid', req.user.memberid)
+  //     .then(function (result) {
+  //       console.log('success! here we are')
+  //       res.send('New group route')
+  //       res.render('newgroup', { title: 'New Group', user: req.user, companies: result, newgroup: req.params.gid })
+  //     })
+  // }
+})
+
+router.post('/joinandrsvp/:gid', function (req, res, next) {
+
 })
 
 // ----------------------------------------------------------------------------
@@ -382,7 +437,7 @@ function getEvents (urls, tempevents, memberid, accesstoken) {
  */
 function getRSVPs (rsvpurl, rsvps, memberid) {
   console.log('getRSVPs')
-  // Wait every second to avoid API throttling
+  // Wait every half second to avoid API throttling
   setTimeout(function () {
     console.log('getRSVPs has been called-------')
   // Get eventids from tempevents table
@@ -421,7 +476,7 @@ function getRSVPs (rsvpurl, rsvps, memberid) {
         }
       }
     })
-  }, 1000)
+  }, 500)
 }
 
 /**

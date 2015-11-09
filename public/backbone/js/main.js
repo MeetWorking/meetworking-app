@@ -104,3 +104,8 @@ $(function () {
   var searchResults = new SearchResultCollection()
   var dashboard = new GUI(searchResults, '.backbone')
 })
+
+function newGroupModal () {
+  console.log('newGroupModal triggered')
+  $('#newGroupModal').modal('show')
+}

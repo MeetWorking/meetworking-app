@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  include ./partials/_scripts.jade
+  include ./partials/_dashboard-nav.jade
+
+  h3 You are not a member of this group.
+  p Please click below to attempt to join the group and RSVP.
+  form(action="/joinandrsvp/#{newgroup}")
+    button.btn.btn-info(type='submit' value='Join and RSVP') Join and RSVP
