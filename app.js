@@ -13,6 +13,7 @@ var logger = require('morgan')
 var cookieParser = require('cookie-parser')
 var bodyParser = require('body-parser')
 var session = require('express-session')
+var flash = require('express-flash')
 
 // ----------------------------------------------------------------------------
 // 1a. Passport authentication, strategies and sessions
@@ -214,8 +215,18 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: false }
 }))
+app.use(flash())
+// Custom flash middleware -- from Ethan Brown's book, 'Web Development with Node & Express'
+// https://gist.github.com/brianmacarthur/a4e3e0093d368aa8e423
+app.use(function (req, res, next) {
+  // if there's a flash message in the session request, make it available in the response, then delete it
+  res.locals.sessionFlash = req.session.sessionFlash
+  delete req.session.sessionFlash
+  next()
+})
 app.use(passport.initialize())
 app.use(passport.session())
+
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/spec', express.static(path.join(__dirname, 'spec')))
 

@@ -146,53 +146,83 @@ router.get('/searchresults', function (req, res, next) {
 })
 
 router.post('/searchresults', function (req, res, next) {
-  var accesstoken = req.user.accesstoken
-  var rsvp = 'no'
-  if (req.body.rsvpstatus === 'Attending') {
-    rsvp = 'yes'
+  req.session.sessionFlash = {
+    type: 'success',
+    message: 'This is a flash message using custom middleware and express-session.'
   }
-  var rsvpurl = 'https://api.meetup.com/2/rsvp/?event_id=' + req.body.eventid + '&rsvp=' + rsvp + '&sign=true&format=json&access_token=' + accesstoken
-  request.post(rsvpurl,
-    function (error, response, body) {
-      console.log('response.statusCode==>', response.statusCode)
-      if (!error && response.statusCode === 400) {
-        console.log('Prompting join modal')
-        // Member is not yet a member of said meetup group, prompt a join modal
-        knex('searches')
-          .where('memberid', req.user.memberid)
-          .then(function (result) {
-            res.render('dashboard', { title: 'Dashboard', user: req.user, companies: result, newgroup: req.body.groupid })
-          })
-      } else if (!error && response.statusCode === 201) {
-        console.log('Updating db with new RSVP')
-        // Successfully rsvped. Update DB
-        var errrsvpresult = JSON.parse(body)
-        console.log('body: ', errrsvpresult)
-      } else {
-        console.log('Error, sending to meetup')
-        // There was an error. Prompt modal to send to meetup event page
-      }
-    }
-  )
-})
-
-router.get('/joinandrsvp/:gid', function (req, res, next) {
-  res.status(404)
-  // if (req.user) { // Determine if user is currently logged in
-  //   knex('searches')
-  //     .where('memberid', req.user.memberid)
-  //     .then(function (result) {
-  //       console.log('success! here we are')
-  //       res.send('New group route')
-  //       res.render('newgroup', { title: 'New Group', user: req.user, companies: result, newgroup: req.params.gid })
-  //     })
+  res.status(403).send('Forbidden')
+  // var accesstoken = req.user.accesstoken
+  // var rsvp = 'no'
+  // if (req.body.rsvpstatus === 'Attending') {
+  //   rsvp = 'yes'
   // }
+  // var rsvpurl = 'https://api.meetup.com/2/rsvp/?event_id=' + req.body.eventid + '&rsvp=' + rsvp + '&sign=true&format=json&access_token=' + accesstoken
+  // request.post(rsvpurl,
+  //   function (error, response, body) {
+  //     console.log('RSVP response.statusCode==>', response.statusCode)
+  //     if (!error && response.statusCode === 400) {
+  //       console.log('Joining and RSVPing')
+  //       // Member is not yet a member of said meetup group, join first
+  //       let joinurl = 'https://api.meetup.com/2/profile/?group_id=' + req.body.groupid + '&key=' + accesstoken
+  //       request.post(joinurl,
+  //         function (error, response, body) {
+  //           console.log('Join response.statusCode==>', response.statusCode)
+  //           if (!error && response.statusCode === 400) {
+  //             // Couldn't auto-join, redirect to error handler
+  //             res.status(403).send('Forbidden')
+  //           } else if (!error && response.statusCode === 201) {
+  //             // Successfully joined, attempt to rsvp again
+  //             request.post(rsvpurl,
+  //               function (error, response, body) {
+  //                 console.log('RSVP #2 response.statusCode==>', response.statusCode)
+  //                 if (!error && response.statusCode === 201) {
+  //                   // RSVPed Successfully
+  //                   // Successfully rsvped. Update DB
+  //                   knex('searchresults')
+  //                     .where({
+  //                       'searchmemberid': req.user.memberid,
+  //                       'eventid': req.body.eventid
+  //                     })
+  //                     .update('rsvpstatus', rsvp)
+  //                     .then(function () {
+  //                       res.status(201)
+  //                     })
+  //                 } else {
+  //                   // Another RSVP problem, send to meetup
+  //                   res.status(403).send('Forbidden')
+  //                 }
+  //               }
+  //             )
+  //           } else {
+  //             // Unhandled error
+  //             res.status(403).send('Forbidden')
+  //           }
+  //         }
+  //       )
+  //     } else if (!error && response.statusCode === 201) {
+  //       console.log('Updating db with new RSVP')
+  //       // Successfully rsvped. Update DB
+  //       knex('searchresults')
+  //         .where({
+  //           'searchmemberid': req.user.memberid,
+  //           'eventid': req.body.eventid
+  //         })
+  //         .update('rsvpstatus', rsvp)
+  //         .then(function () {
+  //           res.status(201)
+  //         })
+  //     } else {
+  //       console.log('Error, sending to meetup')
+  //       // There was an error. Prompt modal to send to meetup event page
+  //       res.status(403).send('Forbidden')
+  //     }
+  //   }
+  // )
 })
 
-router.post('/joinandrsvp/:gid', function (req, res, next) {
-
+router.get('/joinerror/:gid', function (req, res, next) {
+  res.render('joinerror', { groupid: req.params.gid })
 })
-
 // ----------------------------------------------------------------------------
 // 3. New user signup functions
 // ----------------------------------------------------------------------------
@@ -725,9 +755,9 @@ function addSearchResults (searchresults, memberid) {
           })
           .then(function (result) {
             if (result[0]) {
-              rsvpstatus = 'Attending'
+              rsvpstatus = 'yes'
             } else {
-              rsvpstatus = 'Not attending' // TODO: Fix language here
+              rsvpstatus = 'no'
             }
   // 3. Check event status REVIEW: Is this necessary?
   //
@@ -951,7 +981,15 @@ function removeTempTables () {
 // }
 
 // ----------------------------------------------------------------------------
-// 6. Module.exports
+// 6. RSVP functions
+// ----------------------------------------------------------------------------
+
+function joinGroup (groupid, accesstoken) {
+
+}
+
+// ----------------------------------------------------------------------------
+// 7. Module.exports
 // ----------------------------------------------------------------------------
 
 module.exports = router

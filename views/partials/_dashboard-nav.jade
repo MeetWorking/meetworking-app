@@ -4,3 +4,6 @@ body
       a(href="/"): .logo.navbar-left Meetworking
       a.btn.btn-primary.navbar-btn.navbar-right(href="/users/logout") Log out
       a.btn.btn-primary.navbar-btn.navbar-right(href="/") Settings
+  if sessionFlash && sessionFlash.message
+    div(class=sessionFlash.type)
+      p <strong> #{sessionFlash.message}
