@@ -29,12 +29,18 @@ var GUI = (function () {
       $divLeft.append($location)
       var $divRight = $('<div style="margin-left: 2%; width: 32%; float: left">')
       var $rsvpButton = $('<input type="button" id="rsvp" value="RSVP" style="height: 50px; width: 45%">')
-      var $spots = $('<div style="text-align: center; padding-top: 10px; width: 45%">').html('<p style="font-size: 1.25rem">' + this.model.get('spotsleft') + ' spots left</p>')
+      var $spots = ''
+      if (this.model.get('spotsleft')) {
+        $spots = $('<div style="text-align: center; padding-top: 10px; width: 45%">').html('<p style="font-size: 1.25rem">' + this.model.get('spotsleft') + ' spots left</p>')
+      }
       $divRight.append($rsvpButton).append($spots)
       $div.append($divLeft).append($divRight)
       //
       //
-      var $attendance = $('<h3>').text(this.model.get('rsvps') + ' attending, ' + this.model.get('meetworkers') + ' MeetWorkers, ' + this.model.get('recruiters') + ' Recruiters')
+      var $attendance = ''
+      if (this.model.get('rsvps')) {
+        $attendance = $('<h3>').text(this.model.get('rsvps') + ' attending') // + this.model.get('meetworkers') + ' MeetWorkers, ' + this.model.get('recruiters') + ' Recruiters')
+      }
       $cardRight.append($title).append($group).append($div).append($attendance)
       //
       $card.append($cardLeft).append($cardRight)

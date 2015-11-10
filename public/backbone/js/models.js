@@ -33,28 +33,40 @@ var SearchResultModel = Backbone.Model.extend({
     console.log('changeRSVP in model')
     if (this.get('rsvpstatus') === 'yes') {
       this.set('rsvpstatus', 'no')
-      this.save(
-        { error: function (model, jqXHR) {
-          if (jqXHR.statusCode === 403) {
-            console.log('error updating model')
-            window.location = '/joinerror'
-          } else {
-            console.log('Some other error happened :-(')
+      this.save({rsvpstatus: 'no'},
+        {
+          success: function (model, jqXHR) {
+          // Change rsvp color?
+            console.log('Successfully saved ', model)
+          },
+          error: function (model, jqXHR) {
+            if (jqXHR.status === 403) {
+              console.log('error updating model')
+              window.location = '/joinerror/' + model.get('groupname')
+            } else {
+              console.log('Some other error, %s, happened :-(', jqXHR.status + '')
+            }
           }
-        }}
-      )
+        }
+      ).fail(function () { console.log(arguments) })
     } else {
       this.set('rsvpstatus', 'yes')
-      this.save(
-        { error: function (model, jqXHR) {
-          if (jqXHR.statusCode === 403) {
-            console.log('error updating model')
-            window.location = '/joinerror'
-          } else {
-            console.log('Some other error happened :-(')
+      this.save({rsvpstatus: 'yes'},
+        {
+          success: function (model, jqXHR) {
+          // Change rsvp color?
+            console.log('Successfully saved ', model)
+          },
+          error: function (model, jqXHR) {
+            if (jqXHR.status === 403) {
+              console.log('error updating model')
+              window.location = '/joinerror/' + model.get('groupname')
+            } else {
+              console.log('Some other error happened :-(')
+            }
           }
-        }}
-      )
+        }
+      ).fail(function () { console.log(arguments) })
     }
   }
 })
@@ -64,14 +76,6 @@ var SearchResultCollection = Backbone.Collection.extend({
   url: '/searchresults',
   initialize: function () {
     console.log('new SearchResultCollection')
-    this.fetch(
-      { error: function (model, jqXHR) {
-        if (jqXHR.statusCode === 403) {
-          console.log('error updating model')
-          window.location = '/joinerror'
-        } else {
-          console.log('Some other error happened :-(')
-        }
-      }})
+    this.fetch()
   }
 })

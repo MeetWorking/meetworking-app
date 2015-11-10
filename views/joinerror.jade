@@ -1,11 +1,12 @@
 extends layout
 
 block content
-
   include ./partials/_scripts.jade
   include ./partials/_dashboard-nav.jade
   .container
     .row
+      br
+    .row
       h2 Sorry, there was an error authenticating with Meetup.com.
     .row
-      p Please <a href='http://meetup.com'>visit Meetup to attempt to RSVP or join</a>
+      p Please <a href="http://www.meetup.com/find/?allMeetups=false&keywords=#{groupname}&radius=2&userFreeform=Portland%2C+OR&mcId=z97210&mcName=Portland%2C+OR" target="_blank">visit Meetup to attempt to RSVP or join</a>

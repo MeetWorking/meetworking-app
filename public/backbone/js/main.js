@@ -101,7 +101,7 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var searchResults = new SearchResultCollection()
+  var searchResults = window.searchResults = new SearchResultCollection()
   var dashboard = new GUI(searchResults, '.backbone')
   function newGroupModal () {
     console.log('newGroupModal triggered')
