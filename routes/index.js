@@ -1,8 +1,8 @@
+'use strict'
 var express = require('express')
 var router = express.Router()
 var request = require('request')
 var _ = require('lodash')
-var moment = require('moment')
 
 // ----------------------------------------------------------------------------
 // 1. Knex setup
@@ -17,7 +17,11 @@ var knex = require('knex')(config.AWS)
 /* GET landing page. */
 router.get('/', function (req, res, next) {
   if (req.user) { // Determine if user is currently logged in
-    res.render('dashboard', { title: 'Dashboard', user: req.user })
+    knex('searches')
+      .where('memberid', req.user.memberid)
+      .then(function (result) {
+        res.render('dashboard', { title: 'Dashboard', user: req.user, companies: result })
+      })
   } else {
     res.render('index', { title: 'MeetWorking' })
   }
@@ -98,7 +102,7 @@ router.get('/searchresults', function (req, res, next) {
   var memberid = req.user.memberid
   // Jeff Spreadsheet functions:
   knex('searchresults')
-    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.status as displaystatus')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
     .select()
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
@@ -132,12 +136,91 @@ router.get('/searchresults', function (req, res, next) {
             })
             result1[i].searchuids = newResult2
           })
+          result1.sort(function (a, b) {
+            return a.datetime - b.datetime
+          })
           res.send(result1)
         })
     })
   // Use SQL queries via the knex module to find all data relevant to events tied to the user's memberid and saved search companies
 })
 
+router.post('/searchresults', function (req, res, next) {
+  // if (req.body.rsvpstatus === 'yes') {
+  //   return res.json({})
+  // }
+  // res.status(403).send('Forbidden')
+  var accesstoken = req.user.accesstoken
+  var rsvp = req.body.rsvpstatus
+
+  var rsvpurl = 'https://api.meetup.com/2/rsvp/?event_id=' + req.body.eventid + '&rsvp=' + rsvp + '&sign=true&format=json&access_token=' + accesstoken
+  request.post(rsvpurl,
+    function (error, response, body) {
+      console.log('RSVP response.statusCode==>', response.statusCode)
+      if (!error && response.statusCode === 400) {
+        console.log('Joining and RSVPing')
+        // Member is not yet a member of said meetup group, join first
+        let joinurl = 'https://api.meetup.com/2/profile/?group_id=' + req.body.groupid + '&key=' + accesstoken
+        request.post(joinurl,
+          function (error, response, body) {
+            console.log('Join response.statusCode==>', response.statusCode)
+            if (!error && response.statusCode === 400) {
+              // Couldn't auto-join, redirect to error handler
+              res.status(403).send('Forbidden')
+            } else if (!error && response.statusCode === 201) {
+              // Successfully joined, attempt to rsvp again
+              request.post(rsvpurl,
+                function (error, response, body) {
+                  console.log('RSVP #2 response.statusCode==>', response.statusCode)
+                  if (!error && response.statusCode === 201) {
+                    // RSVPed Successfully
+                    // Successfully rsvped. Update DB
+                    knex('searchresults')
+                      .where({
+                        'searchmemberid': req.user.memberid,
+                        'eventid': req.body.eventid
+                      })
+                      .update('rsvpstatus', rsvp)
+                      .then(function () {
+                        res.status(201)
+                      })
+                  } else {
+                    // Another RSVP problem, send to meetup
+                    res.status(403).send('Forbidden')
+                  }
+                }
+              )
+            } else {
+              // Unhandled error
+              res.status(403).send('Forbidden')
+            }
+          }
+        )
+      } else if (!error && response.statusCode === 201) {
+        console.log('Updating db with new RSVP')
+        // Successfully rsvped. Update DB
+        knex('searchresults')
+          .where({
+            'searchmemberid': req.user.memberid,
+            'eventid': req.body.eventid
+          })
+          .update('rsvpstatus', rsvp)
+          .then(function () {
+            res.status(201)
+          })
+      } else {
+        console.log('Error, sending to meetup')
+        // There was an error. Prompt modal to send to meetup event page
+        res.status(403).send('Forbidden')
+      }
+    }
+  )
+})
+
+router.get('/joinerror/:groupname', function (req, res, next) {
+  var joined = req.params.groupname.split(' ').join('+')
+  res.render('joinerror', { groupname: joined })
+})
 // ----------------------------------------------------------------------------
 // 3. New user signup functions
 // ----------------------------------------------------------------------------
@@ -382,7 +465,7 @@ function getEvents (urls, tempevents, memberid, accesstoken) {
  */
 function getRSVPs (rsvpurl, rsvps, memberid) {
   console.log('getRSVPs')
-  // Wait every second to avoid API throttling
+  // Wait every half second to avoid API throttling
   setTimeout(function () {
     console.log('getRSVPs has been called-------')
   // Get eventids from tempevents table
@@ -421,7 +504,7 @@ function getRSVPs (rsvpurl, rsvps, memberid) {
         }
       }
     })
-  }, 1000)
+  }, 500)
 }
 
 /**
@@ -670,9 +753,9 @@ function addSearchResults (searchresults, memberid) {
           })
           .then(function (result) {
             if (result[0]) {
-              rsvpstatus = 'Attending'
+              rsvpstatus = 'yes'
             } else {
-              rsvpstatus = 'Not attending' // TODO: Fix language here
+              rsvpstatus = 'no'
             }
   // 3. Check event status REVIEW: Is this necessary?
   //
@@ -896,7 +979,15 @@ function removeTempTables () {
 // }
 
 // ----------------------------------------------------------------------------
-// 6. Module.exports
+// 6. RSVP functions
+// ----------------------------------------------------------------------------
+
+function joinGroup (groupid, accesstoken) {
+
+}
+
+// ----------------------------------------------------------------------------
+// 7. Module.exports
 // ----------------------------------------------------------------------------
 
 module.exports = router

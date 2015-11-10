@@ -15,6 +15,7 @@ var SearchResultModel = Backbone.Model.extend({
     spotsleft: '',
     meetworkers: '',
     recruiters: '',
+    rsvpstatus: '',
 
     // 'status' field from from searchresults table (need distinct value)
     displaystatus: '',
@@ -26,6 +27,47 @@ var SearchResultModel = Backbone.Model.extend({
     console.log('new SearchResultModel')
 		// run queries that will add properties to each model instance which represents the count of members attending an event that work for a saved search company
 		// update searchuids property with an array of objects that each contain searchuid, searchmemberid, rsvpstatus, companymatch, employeematch, searchcompany, and logourl
+  },
+  changeRSVP: function () {
+    // Toggle function for RSVP status
+    console.log('changeRSVP in model')
+    if (this.get('rsvpstatus') === 'yes') {
+      this.set('rsvpstatus', 'no')
+      this.save({rsvpstatus: 'no'},
+        {
+          success: function (model, jqXHR) {
+          // Change rsvp color?
+            console.log('Successfully saved ', model)
+          },
+          error: function (model, jqXHR) {
+            if (jqXHR.status === 403) {
+              console.log('error updating model')
+              window.location = '/joinerror/' + model.get('groupname')
+            } else {
+              console.log('Some other error, %s, happened :-(', jqXHR.status + '')
+            }
+          }
+        }
+      ).fail(function () { console.log(arguments) })
+    } else {
+      this.set('rsvpstatus', 'yes')
+      this.save({rsvpstatus: 'yes'},
+        {
+          success: function (model, jqXHR) {
+          // Change rsvp color?
+            console.log('Successfully saved ', model)
+          },
+          error: function (model, jqXHR) {
+            if (jqXHR.status === 403) {
+              console.log('error updating model')
+              window.location = '/joinerror/' + model.get('groupname')
+            } else {
+              console.log('Some other error happened :-(')
+            }
+          }
+        }
+      ).fail(function () { console.log(arguments) })
+    }
   }
 })
 
