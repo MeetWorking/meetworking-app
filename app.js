@@ -13,6 +13,7 @@ var logger = require('morgan')
 var cookieParser = require('cookie-parser')
 var bodyParser = require('body-parser')
 var session = require('express-session')
+var flash = require('express-flash')
 
 // ----------------------------------------------------------------------------
 // 1a. Passport authentication, strategies and sessions
@@ -214,8 +215,18 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: false }
 }))
+app.use(flash())
+// Custom flash middleware -- from Ethan Brown's book, 'Web Development with Node & Express'
+// https://gist.github.com/brianmacarthur/a4e3e0093d368aa8e423
+app.use(function (req, res, next) {
+  // if there's a flash message in the session request, make it available in the response, then delete it
+  res.locals.sessionFlash = req.session.sessionFlash
+  delete req.session.sessionFlash
+  next()
+})
 app.use(passport.initialize())
 app.use(passport.session())
+
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/spec', express.static(path.join(__dirname, 'spec')))
 
@@ -245,41 +256,11 @@ app.get('/auth/linkedin',
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
 app.get('/auth/meetup/callback',
-  passport.authenticate('meetup', { successRedirect: '/signup', failureRedirect: '/login' })) // ,
-  // function (req, res) {
-    // knex.select().from('members').where('memberid', req.user.id)
-    //   .then(function (result) {
-    //     if (result[0] === undefined) {
-    //       // Sign up route
-    //       // User has not been searched or signed up
-    //       // Add a user to the db
-    //       console.log('New user route in signup')
-    //       console.log('New user---->', buildUser(res.req.user))
-    //       knex('members')
-    //         .insert(buildUser(res.req.user, 1)) // where 1 is the user type, tbd
-    //         .catch(function (err) { console.log(err) })
-    //       // ...
-    //       // Send them back to signup page with flag
-    //       res.render('signup')
-    //     } else if (result[0].usertypeid < 3) {
-    //       // Log in route
-    //       // User has previously signed up
-    //       console.log()
-    //       res.redirect('/')
-    //     } else {
-    //       // Log in route for searched users
-    //       // Modify a user in the db
-    //       res.redirect('/signup')
-    //     }
-    //   })
-  // })
+  passport.authenticate('meetup', { successRedirect: '/signup', failureRedirect: '/login' })
+)
 
 app.get('/auth/linkedin/callback',
   passport.authenticate('linkedin', { successRedirect: '/signup', failureRedirect: '/login' })
-  // function (req, res) {
-  //   // Successful authentication, redirect home.
-  //   res.redirect('/')
-  // }
 )
 
 // catch 404 and forward to error handler

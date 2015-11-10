@@ -1,0 +1,15 @@
+body
+  .navbar.navbar-default.navbar-fixed-top
+    .container
+      a(href="/"): .logo.navbar-left Meetworking
+      
+      a.btn.btn-primary.navbar-btn.navbar-right(href="/users/logout") Log out
+      
+      a.btn.btn-primary.navbar-btn.navbar-right(href="/") Settings
+      
+      form.navbar-right.navbar-pad
+        input.form-control(type="search" name="searchbar" placeholder="Search companies")
+
+  if sessionFlash && sessionFlash.message
+    div(class=sessionFlash.type)
+      p <strong> #{sessionFlash.message}
