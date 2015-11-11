@@ -11,9 +11,105 @@
 
 body {
   padding-top: 60px;
+  color: black;
+}
+
+h2, h3, h4, h5 {
+  color: black;
 }
 
 .navbar-pad {
   padding-top: 10px;
   margin-left: 5px;
+}
+
+.search-result {
+  margin-top: 10px;
+  padding-top: 20px;
+}
+
+.date {
+  color: #8D99AE;
+}
+
+.card {
+  border-top: 1px solid black;
+  height: 150px;
+}
+
+.card-left {
+  width: 20%;
+  float: left;
+  padding-right: 2%;
+}
+
+.time {
+  font-family: "Lora", "Times New Roman", serif;
+}
+
+.card-right {
+  width: 80%;
+  float: left;
+}
+
+.title {
+  font-family: "Lora", "Times New Roman", serif;
+}
+
+.group {
+  font-size: 1.25rem;
+}
+
+.div-left {
+  width: 65%;
+  float: left;
+}
+
+.location {
+  height: 50px;
+  padding: 5px;
+}
+
+.location h3 {
+  font-family: "Lora", "Times New Roman", serif;
+}
+
+.div-right {
+  margin-left: 2%;
+  width: 32%;
+  float: left;
+}
+
+.btn-rsvp {
+
+}
+
+.spots-left {
+  text-align: center;
+  padding-top: 10px;
+  width: 45%;
+}
+
+.spots-left p {
+  font-size: 1.25rem;
+}
+
+.rsvps {
+  font-family: "Lora", "Times New Roman", serif;
+  padding-top: 5px;
+}
+
+.color1 {
+  border: 3px solid #da5d06;
+  color: #da5d06;
+}
+
+.color2 {
+  border: 3px solid #339d17;
+  color: #339d17;
+}
+
+.color3 {
+  border: 3px solid #13141d;
+  color: #13141d;
 }

@@ -140,7 +140,14 @@ router.get('/searchresults', function (req, res, next) {
           result1.sort(function (a, b) {
             return a.datetime - b.datetime
           })
-          res.send(result1)
+          knex('searches')
+            .where('memberid', req.user.memberid)
+            .then(function (companies) {
+              result1.forEach(function (elem, ind) {
+                elem.companies = companies
+              })
+              res.send(result1)
+            })
         })
     })
   // Use SQL queries via the knex module to find all data relevant to events tied to the user's memberid and saved search companies
