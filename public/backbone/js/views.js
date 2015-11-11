@@ -88,9 +88,18 @@ var GUI = (function () {
     initialize: function (opts) {
       _.extend(this, opts) // if (opts) {this.container = opts.container}
       this.render()
+      this.listenTo(this.model, 'sync', this.updateRSVP)
     },
     events: {
       'click #rsvp': 'changeRSVP'
+    },
+    updateRSVP: function (model) {
+      this.$('#rsvp').toggleClass('btn-primary btn-default')
+      if (model.get('rsvpstatus') === 'yes') {
+        this.$('#rsvp').attr('value', 'Going')
+      } else {
+        this.$('#rsvp').attr('value', 'RSVP')
+      }
     },
     changeRSVP: function () {
       console.log('changeRSVP in view')

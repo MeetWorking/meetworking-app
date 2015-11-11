@@ -190,7 +190,7 @@ router.post('/searchresults', function (req, res, next) {
                       })
                       .update('rsvpstatus', rsvp)
                       .then(function () {
-                        res.status(201)
+                        res.status(200).json({rsvpstatus: rsvp})
                       })
                   } else {
                     // Another RSVP problem, send to meetup
@@ -214,7 +214,7 @@ router.post('/searchresults', function (req, res, next) {
           })
           .update('rsvpstatus', rsvp)
           .then(function () {
-            res.status(201)
+            res.status(200).json({rsvpstatus: rsvp})
           })
       } else {
         console.log('Error, sending to meetup')
