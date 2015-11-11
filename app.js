@@ -108,7 +108,6 @@ passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
   callbackURL: 'http://localhost:3000/auth/meetup/callback'
-  // callbackURL: '/'
 },
   function (token, tokenSecret, profile, done) {
     knex.select().from('members').where('memberid', profile.id)
@@ -133,6 +132,7 @@ passport.use(new MeetupStrategy({
           // Log in route
           // User has previously signed up
           // Return existing user
+          console.log('----Logging in user----')
           knex('members')
             .where('memberid', result[0].memberid)
             .update('accesstoken', token)
@@ -145,6 +145,7 @@ passport.use(new MeetupStrategy({
         } else {
           // Log in route for searched users
           // Modify previously searched user
+          console.log('----Updating searched user----')
           knex('members')
             .update({
               alerts: 'ON',

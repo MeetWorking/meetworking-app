@@ -21,7 +21,8 @@ var SearchResultModel = Backbone.Model.extend({
     displaystatus: '',
 
     // combination of fields from searchresults and searches tables (with the exception of searchresults.status)
-    searchuids: []
+    searchuids: [],
+    companies: []
   },
   initialize: function () {
     console.log('new SearchResultModel')
