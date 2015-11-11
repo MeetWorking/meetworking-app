@@ -26,6 +26,9 @@ var GUI = (function () {
       var $location = $('<div class="location">').html('<p>@ ' + this.model.get('location') + '</p>')
       var $divRight = $('<div class="div-right">')
       var $rsvpButton = $('<input type="button" class="btn btn-primary btn-sm" id="rsvp" value="RSVP">')
+      if (this.model.get('rsvpstatus') === 'yes') {
+        $rsvpButton = $('<input type="button" class="btn btn-default btn-sm" id="rsvp" value="Going">')
+      }
       var $spots = ''
       if (this.model.get('spotsleft')) {
         $spots = $('<div class="spots-left">').html('<p>' + this.model.get('spotsleft') + ' spots left</p>')
