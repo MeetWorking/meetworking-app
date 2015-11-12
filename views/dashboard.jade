@@ -12,10 +12,13 @@ block content
         #sidebar(data-spy="affix" data-offset-top="0" data-offset-bottom="200")
           h3 Search companies
           br
-          .btn.btn-info #{companies[0].searchcompany}
+          form(action="/company/#{companies[0].searchcompany}")
+            input.btn.btn-info(type="submit" value="#{companies[0].searchcompany}")
           br
-          .btn.btn-success #{companies[1].searchcompany}
+          form(action="/company/#{companies[1].searchcompany}")
+            input.btn.btn-success(type="submit" value="#{companies[1].searchcompany}")
           br
-          .btn.btn-danger #{companies[2].searchcompany}
+          form(action="/company/#{companies[2].searchcompany}")
+            input.btn.btn-danger(type="submit" value="#{companies[2].searchcompany}")
           br
           p Filters

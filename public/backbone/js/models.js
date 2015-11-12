@@ -78,3 +78,13 @@ var SearchResultCollection = Backbone.Collection.extend({
     this.fetch()
   }
 })
+
+var CompanySearchCollection = Backbone.Collection.extend({
+  model: SearchResultModel,
+  url: window.location.pathname + '/results',
+  initialize: function (opts) {
+    console.log('new CompanySearchCollection')
+    console.log(this.url)
+    this.fetch()
+  }
+})

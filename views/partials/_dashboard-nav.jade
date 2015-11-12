@@ -7,9 +7,5 @@ body
       
       a.btn.btn-primary.navbar-btn.navbar-right(href="/") Settings
       
-      form.navbar-right.navbar-pad
-        input.form-control(type="search" name="searchbar" placeholder="Search companies")
-
-  if sessionFlash && sessionFlash.message
-    div(class=sessionFlash.type)
-      p <strong> #{sessionFlash.message}
+      form.navbar-right.navbar-pad(action="/search")
+        input.form-control(type="search" name="companysearch" placeholder="Search companies")

@@ -1,4 +1,4 @@
-/* globals $, SearchResultCollection, GUI */
+/* globals $, CompanySearchCollection, GUI */
 
 var sample = [
   {
@@ -101,6 +101,7 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var searchResults = window.searchResults = new SearchResultCollection()
-  var dashboard = new GUI(searchResults, '.backbone')
+  var path = window.location.pathname
+  var companySearch = window.companySearch = new CompanySearchCollection({path})
+  var dashboard = new GUI(companySearch, '.backbone')
 })
