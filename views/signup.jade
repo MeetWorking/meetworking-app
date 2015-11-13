@@ -1,6 +1,11 @@
 extends layout
 
 block content
+  if settings
+    include ./partials/_scripts.jade
+    include ./partials/_dashboard-nav.jade
+  else
+    include ./partials/_plain-nav.jade
   .container
     .row
       .col-md-1.col-md-offset-2
@@ -8,7 +13,12 @@ block content
       .col-md-6.col-md-offset-1
         a(href="/auth/linkedin")
           button.btn.btn-inverse Autocomplete with LinkedIn
-        form(action="/signup" method="POST")
+        - var formaction
+        if settings
+          - formaction = "/settings"
+        else
+          - formaction = "/signup"
+        form(action="#{formaction}" method="POST")
           if user.linkedIn
             label(for="name") Name 
             input(type="text" name="name" value="#{linkedIn.firstName} #{linkedIn.lastName}")
@@ -31,22 +41,62 @@ block content
             else
               input(type="text" name="careergoals" value="")
           else
-            label(for="name") Name
-            input(type="text" name="name" value="")
-            br
-            label(for="company") Company
-            input(type="text" name="company" value="")
-            br
-            label(for="position") Position
-            input(type="text" name="position" value="")
-            br
-            label(for="careergoals") Career Goals
-            input(type="text" name="careergoals" value="")
+            if settings
+              label(for="name") Name
+              input(type="text" name="name" value="#{user.name}")
+              br
+              label(for="company") Company
+              input(type="text" name="company" value="#{user.company}")
+              br
+              label(for="position") Position
+              input(type="text" name="position" value="#{user.position}")
+              br
+              label(for="careergoals") Career Goals
+              input(type="text" name="careergoals" value="#{user.careergoals}")
+            else
+              label(for="name") Name
+              input(type="text" name="name" value="")
+              br
+              label(for="company") Company
+              input(type="text" name="company" value="")
+              br
+              label(for="position") Position
+              input(type="text" name="position" value="")
+              br
+              label(for="careergoals") Career Goals
+              input(type="text" name="careergoals" value="")
           br
           p Choose three companies to meet:
-          input(type="text" name="searchcompany1" value="")
-          input(type="text" name="searchcompany2" value="")
-          input(type="text" name="searchcompany3" value="")
+          if settings && companies[0]
+            if companies[0] && companies[0].length > 2
+              input.color1(type="text" name="searchcompany1" id="searchcompany1" value="#{companies[0]}" readonly)
+              a(href="" id="remove-searchcompany1")
+                span.glyphicon.glyphicon-remove.color1
+            else
+              input(type="text" name="searchcompany1" value="")
+            br
+            if companies[1] && companies[1].length > 2
+              input.color2(type="text" name="searchcompany2" id="searchcompany2" value="#{companies[1]}" readonly)
+              a(href="" id="remove-searchcompany2")
+                span.glyphicon.glyphicon-remove.color2
+            else
+              input(type="text" name="searchcompany2" value="")
+            br
+            if companies[2] && companies[2].length > 2
+              input.color3(type="text" name="searchcompany3" id="searchcompany3" value="#{companies[2]}" readonly)
+              a(href="" id="remove-searchcompany3")
+                span.glyphicon.glyphicon-remove.color3
+            else
+              input(type="text" name="searchcompany3" value="")
+          else
+            input(type="text" name="searchcompany1" value="")
+            input(type="text" name="searchcompany2" value="")
+            input(type="text" name="searchcompany3" value="")
           br
           br
-          input.btn.btn-success(type="submit" value="Sign up!")
+          if settings
+            input.btn.btn-success(type="submit" id="profileupdate" value="Save profile")
+          else
+            input.btn.btn-success(type="submit" id="profileupdate" value="Sign up!")
+  .preloader
+    span.preloader-gif

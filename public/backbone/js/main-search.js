@@ -1,4 +1,4 @@
-/* globals $, SearchResultCollection, GUI */
+/* globals $, CompanySearchCollection, GUI */
 
 var sample = [
   {
@@ -101,8 +101,9 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var searchResults = window.searchResults = new SearchResultCollection()
-  var dashboard = new GUI(searchResults, '.backbone')
+  var path = window.location.pathname
+  var companySearch = window.companySearch = new CompanySearchCollection({path})
+  var dashboard = new GUI(companySearch, '.backbone')
   $('#companysearch').submit(function (e) {
     $('.preloader').fadeIn(300)
     var url = window.location.origin + '/company/' + $('#companysearchval').val().replace(/ /g, '+')
@@ -111,20 +112,5 @@ $(function () {
     window.location.assign(url)
     e.preventDefault()
     // custom handling here
-  })
-  $('#remove-searchcompany1').click(function (e) {
-    $('#searchcompany1').attr('readonly', false).removeClass('color1').val('')
-    $('#remove-searchcompany1').hide()
-    e.preventDefault()
-  })
-  $('#remove-searchcompany2').click(function (e) {
-    $('#searchcompany2').attr('readonly', false).removeClass('color2').val('')
-    $('#remove-searchcompany2').hide()
-    e.preventDefault()
-  })
-  $('#remove-searchcompany3').click(function (e) {
-    $('#searchcompany3').attr('readonly', false).removeClass('color3').val('')
-    $('#remove-searchcompany3').hide()
-    e.preventDefault()
   })
 })

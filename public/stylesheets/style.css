@@ -99,6 +99,7 @@ h2, h3, h4, h5 {
   padding-top: 5px;
 }
 
+/*https://coolors.co/app/2b2d42-8d99ae-edf2f4-ef233c-d90429*/
 .color1 {
   border: 3px solid #da5d06;
   color: #da5d06;
@@ -112,4 +113,30 @@ h2, h3, h4, h5 {
 .color3 {
   border: 3px solid #13141d;
   color: #13141d;
+}
+
+.colortemp {
+  border: 3px solid #1BE7FF;
+  color: #1BE7FF;
+}
+
+.preloader{
+    position: fixed;
+    top:0;
+    left:0;
+    bottom: 0;
+    right: 0;
+    background: #fff;
+    z-index: 99999;
+}
+
+.preloader .preloader-gif{
+    display: block;
+    width: 200px;
+    height: 146px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: -100px 0 0 -73px;
+    background: url('/assets/preloader.gif') no-repeat;
 }

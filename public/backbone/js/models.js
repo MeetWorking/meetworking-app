@@ -33,7 +33,6 @@ var SearchResultModel = Backbone.Model.extend({
     // Toggle function for RSVP status
     console.log('changeRSVP in model')
     if (this.get('rsvpstatus') === 'yes') {
-      this.set('rsvpstatus', 'no')
       this.save({rsvpstatus: 'no'},
         {
           success: function (model, jqXHR) {
@@ -51,7 +50,6 @@ var SearchResultModel = Backbone.Model.extend({
         }
       ).fail(function () { console.log(arguments) })
     } else {
-      this.set('rsvpstatus', 'yes')
       this.save({rsvpstatus: 'yes'},
         {
           success: function (model, jqXHR) {
@@ -77,6 +75,16 @@ var SearchResultCollection = Backbone.Collection.extend({
   url: '/searchresults',
   initialize: function () {
     console.log('new SearchResultCollection')
+    this.fetch()
+  }
+})
+
+var CompanySearchCollection = Backbone.Collection.extend({
+  model: SearchResultModel,
+  url: window.location.pathname + '/results',
+  initialize: function (opts) {
+    console.log('new CompanySearchCollection')
+    console.log(this.url)
     this.fetch()
   }
 })
