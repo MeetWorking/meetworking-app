@@ -13,12 +13,14 @@ block content
           h3 Search companies
           br
           form(action="/company/#{companies[0].searchcompany}")
-            input.btn.btn-info(type="submit" value="#{companies[0].searchcompany}")
+            input.btn-company.btn.btn-info(type="submit" value="#{companies[0].searchcompany}")
           br
           form(action="/company/#{companies[1].searchcompany}")
-            input.btn.btn-success(type="submit" value="#{companies[1].searchcompany}")
+            input.btn-company.btn.btn-success(type="submit" value="#{companies[1].searchcompany}")
           br
           form(action="/company/#{companies[2].searchcompany}")
-            input.btn.btn-danger(type="submit" value="#{companies[2].searchcompany}")
+            input.btn-company.btn.btn-danger(type="submit" value="#{companies[2].searchcompany}")
           br
           p Filters
+  .preloader
+    span.preloader-gif

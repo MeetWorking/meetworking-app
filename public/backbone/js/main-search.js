@@ -104,4 +104,13 @@ $(function () {
   var path = window.location.pathname
   var companySearch = window.companySearch = new CompanySearchCollection({path})
   var dashboard = new GUI(companySearch, '.backbone')
+  $('#companysearch').submit(function (e) {
+    $('.preloader').fadeIn(300)
+    var url = window.location.origin + '/company/' + $('#companysearchval').val().replace(/ /g, '+')
+    console.log('url: ', url)
+    // $.ajax(url)
+    window.location.assign(url)
+    e.preventDefault()
+    // custom handling here
+  })
 })

@@ -42,35 +42,28 @@ var GUI = (function () {
       var uids = _.pluck(this.model.get('companies'), 'uid')
       // console.log('this.model.get(companies): ', this.model.get('companies'))
       this.model.get('searchuids').forEach(function (searchuid, index) {
-        console.log('searchuid: ', searchuid)
         if (uids.indexOf(searchuid.searchuid) === 0) {
           // set color1 class
           if (searchuid.companymatch) {
-            console.log('company is color1')
             $location.addClass('color1')
           }
           if (searchuid.employeematch) {
-            console.log('employee is color1')
             $attendance.addClass('color1')
           }
         } else if (uids.indexOf(searchuid.searchuid) === 1) {
           // set color2 class
           if (searchuid.companymatch) {
-            console.log('company is color2')
             $location.addClass('color2')
           }
           if (searchuid.employeematch) {
-            console.log('employee is color2')
             $attendance.addClass('color2')
           }
         } else if (uids.indexOf(searchuid.searchuid) === 2) {
           // set color3 class
           if (searchuid.companymatch) {
-            console.log('company is color3')
             $location.addClass('color3')
           }
           if (searchuid.employeematch) {
-            console.log('employee is color2')
             $attendance.addClass('color3')
           }
         }

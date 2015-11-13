@@ -6,6 +6,5 @@ body
       a.btn.btn-primary.navbar-btn.navbar-right(href="/users/logout") Log out
       
       a.btn.btn-primary.navbar-btn.navbar-right(href="/") Settings
-      
-      form.navbar-right.navbar-pad(action="/search")
-        input.form-control(type="search" name="companysearch" placeholder="Search companies")
+      form.navbar-right.navbar-pad(id="companysearch")
+        input.form-control(type="search" id="companysearchval" placeholder="Search companies")

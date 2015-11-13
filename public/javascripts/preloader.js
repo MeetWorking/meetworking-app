@@ -6,7 +6,7 @@ $(document).ready(function () {
   $('#login').click(function () {
     $('.preloader').fadeIn(300)
   })
-  // $(window).load(function () {
-  //   $('.preloader').delay(400).fadeOut(500)
-  // })
+  $('.btn-company').click(function () {
+    $('.preloader').fadeIn(300)
+  })
 })

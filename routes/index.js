@@ -67,6 +67,7 @@ router.get('/signup', function (req, res, next) {
     // Send to dashboard
     res.redirect('/')
   }
+  ee.removeAllListeners('dataready')
   ee.on('dataready', renderDash)
 }) // End GET signup page
 
@@ -105,6 +106,7 @@ router.post('/signup', function (req, res, next) {
     // Send to dashboard
     res.redirect('/')
   }
+  ee.removeAllListeners('dataready')
   ee.on('dataready', renderDash)
 })
 
@@ -242,42 +244,49 @@ router.get('/joinerror/:groupname', function (req, res, next) {
 })
 
 router.get('/company/:name', function (req, res, next) {
-  // TODO: Replace %20+ in name with space
+  var companyname = req.params.name.replace(/\+/, ' ')
   knex('searches')
     .where({
       memberid: req.user.memberid,
-      searchcompany: req.params.name
+      searchcompany: companyname
     })
     .then(function (result) {
       console.log('got a result: ', result)
       if (!result[0]) {
         knex('searches')
-          .insert({
+          .where({
             memberid: req.user.memberid,
-            searchcompany: req.params.name,
             type: 'temp'
           })
+          .del()
           .then(function () {
-            console.log('starting search-------')
-            startSearch([req.params.name], req.user.memberid, req.user.accesstoken, true)
+            knex('searches')
+              .insert({
+                memberid: req.user.memberid,
+                searchcompany: companyname,
+                type: 'temp'
+              })
+              .then(function () {
+                console.log('starting search-------')
+                startSearch([companyname], req.user.memberid, req.user.accesstoken, true)
+              })
           })
       } else {
-        res.render('companysearch', {companyname: req.params.name})
+        res.render('companysearch', {companyname: companyname})
       }
     })
     .catch(function (err) { console.error(err) })
   function renderSearch () {
     console.log('rendering companysearch from /company/:name')
-    res.render('companysearch', {companyname: req.params.name})
+    res.render('companysearch', {companyname: companyname})
   }
+  ee.removeAllListeners('dataready')
   ee.on('dataready', renderSearch)
 })
 
 router.get('/company/:name/results', function (req, res, next) {
-  // Check if tis is a saved (perm) or temp (temp) search
-  // Look for different events depending
-  // Build 'noresults' page and handler
   var memberid = req.user.memberid
+  var companyname = req.params.name.replace(/\+/, ' ')
   // Jeff Spreadsheet functions:
   knex('searchresults')
     .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
@@ -287,7 +296,7 @@ router.get('/company/:name/results', function (req, res, next) {
     .where({
       'searchresults.searchmemberid': memberid,
       'searches.memberid': memberid,
-      'searches.searchcompany': req.params.name
+      'searches.searchcompany': companyname
     })
     .then(function (result1) {
       knex('searchresults')
@@ -297,7 +306,7 @@ router.get('/company/:name/results', function (req, res, next) {
         .where({
           'searchresults.searchmemberid': memberid,
           'searches.memberid': memberid,
-          'searches.searchcompany': req.params.name
+          'searches.searchcompany': companyname
         })
         .then(function (result2) {
           result1.forEach(function (e, i) {
@@ -334,9 +343,81 @@ router.get('/company/:name/results', function (req, res, next) {
             })
         })
     })
-  console.log(req.params.name)
+  console.log(companyname)
   // Search the company
   // Send models to backbone
+})
+
+router.post('/company/:name/results', function (req, res, next) {
+  // if (req.body.rsvpstatus === 'yes') {
+  //   return res.json({})
+  // }
+  // res.status(403).send('Forbidden')
+  var accesstoken = req.user.accesstoken
+  var rsvp = req.body.rsvpstatus
+
+  var rsvpurl = 'https://api.meetup.com/2/rsvp/?event_id=' + req.body.eventid + '&rsvp=' + rsvp + '&sign=true&format=json&access_token=' + accesstoken
+  request.post(rsvpurl,
+    function (error, response, body) {
+      console.log('RSVP response.statusCode==>', response.statusCode)
+      if (!error && response.statusCode === 400) {
+        console.log('Joining and RSVPing')
+        // Member is not yet a member of said meetup group, join first
+        let joinurl = 'https://api.meetup.com/2/profile/?group_id=' + req.body.groupid + '&key=' + accesstoken
+        request.post(joinurl,
+          function (error, response, body) {
+            console.log('Join response.statusCode==>', response.statusCode)
+            if (!error && response.statusCode === 400) {
+              // Couldn't auto-join, redirect to error handler
+              res.status(403).send('Forbidden')
+            } else if (!error && response.statusCode === 201) {
+              // Successfully joined, attempt to rsvp again
+              request.post(rsvpurl,
+                function (error, response, body) {
+                  console.log('RSVP #2 response.statusCode==>', response.statusCode)
+                  if (!error && response.statusCode === 201) {
+                    // RSVPed Successfully
+                    // Successfully rsvped. Update DB
+                    knex('searchresults')
+                      .where({
+                        'searchmemberid': req.user.memberid,
+                        'eventid': req.body.eventid
+                      })
+                      .update('rsvpstatus', rsvp)
+                      .then(function () {
+                        res.status(200).json({rsvpstatus: rsvp})
+                      })
+                  } else {
+                    // Another RSVP problem, send to meetup
+                    res.status(403).send('Forbidden')
+                  }
+                }
+              )
+            } else {
+              // Unhandled error
+              res.status(403).send('Forbidden')
+            }
+          }
+        )
+      } else if (!error && response.statusCode === 201) {
+        console.log('Updating db with new RSVP')
+        // Successfully rsvped. Update DB
+        knex('searchresults')
+          .where({
+            'searchmemberid': req.user.memberid,
+            'eventid': req.body.eventid
+          })
+          .update('rsvpstatus', rsvp)
+          .then(function () {
+            res.status(200).json({rsvpstatus: rsvp})
+          })
+      } else {
+        console.log('Error, sending to meetup')
+        // There was an error. Prompt modal to send to meetup event page
+        res.status(403).send('Forbidden')
+      }
+    }
+  )
 })
 
 // ----------------------------------------------------------------------------
@@ -742,7 +823,7 @@ function searchCompanies (memberid, companysearch) {
                   return e.type === 'perm'
                 })
               }
-              var rsvpmatches = []
+              console.log('filtered result in searchCompanies: ', result)
               var companymatches = []
               var membersearch = result
               var i = result.length
@@ -765,35 +846,11 @@ function searchCompanies (memberid, companysearch) {
                     i--
                     if (ind === 0 && i === 0) {
       // Call function when all results added
-                      addTempCompanyMatches(memberid, companymatches)
+                      addTempCompanyMatches(memberid, companymatches, membersearch)
                     }
                   })
               })
       // Search through member bios with same three companies
-              var index = membersearch.length
-              membersearch.forEach(function (element) {
-                knex
-                  .pluck('memberid')
-                  .from('members')
-                  .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', element.searchcompany)
-                  .then(function (memberids) {
-      // Remove current user from member matches
-                    var differencememberids = _.difference(memberids, [memberid])
-                    var n = differencememberids.length
-                    differencememberids.forEach(function (l) {
-                      var temprsvpmatch = {
-                        memberid: l,
-                        searchuid: element.uid
-                      }
-                      rsvpmatches.push(temprsvpmatch)
-                      n--
-                    })
-                    index--
-                    if (index === 0 && n === 0) {
-                      addTempRsvpMatches(rsvpmatches, memberid)
-                    }
-                  })
-              })
             })
         })
     })
@@ -804,11 +861,39 @@ function searchCompanies (memberid, companysearch) {
  * Called by searchCompanies
  * @param {array} tempcompanymatches - Array of matched data from tempevents table
  */
-function addTempCompanyMatches (memberid, tempcompanymatches) {
+function addTempCompanyMatches (memberid, tempcompanymatches, membersearch) {
   console.log('addTempCompanyMatches')
+  console.log('adding temp company matches: ', tempcompanymatches)
+  var rsvpmatches = []
   knex('tempcompanymatches' + memberid)
     .insert(tempcompanymatches)
     .catch(function (err) { console.error(err) })
+    .then(function () {
+      var index = membersearch.length
+      membersearch.forEach(function (element) {
+        knex
+          .pluck('memberid')
+          .from('members')
+          .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', element.searchcompany)
+          .then(function (memberids) {
+// Remove current user from member matches
+            var differencememberids = _.difference(memberids, [memberid])
+            var n = differencememberids.length
+            differencememberids.forEach(function (l) {
+              var temprsvpmatch = {
+                memberid: l,
+                searchuid: element.uid
+              }
+              rsvpmatches.push(temprsvpmatch)
+              n--
+            })
+            index--
+            if (index === 0 && n === 0) {
+              addTempRsvpMatches(rsvpmatches, memberid)
+            }
+          })
+      })
+    })
 } // End addTempCompanyMatches
 
 /**
@@ -819,6 +904,7 @@ function addTempCompanyMatches (memberid, tempcompanymatches) {
  */
 function addTempRsvpMatches (rsvpmatches, memberid) {
   console.log('addTempRsvpMatches')
+  console.log('adding temp rsvp matches: ', rsvpmatches)
   var temprsvpmatches = []
   var i = rsvpmatches.length
   if (i === 0) {
@@ -857,6 +943,10 @@ function addTempRsvpMatches (rsvpmatches, memberid) {
   })
 } // End addTempRsvpMatches
 
+// function startUnion (counter) {
+//   var i = counter || 0
+// }
+
 /**
  * Perform a union of temprsvpmatches and tempcompanymatches tables
  * Called by addTempRsvpMatches
@@ -871,14 +961,14 @@ function unionTempMatches (memberid) {
     .union(function () {
       this.select('memberid', 'searchuid', 'eventid')
       .from('tempcompanymatches' + memberid)
-      .then(function () {
-        // NOTE: You don't get the desired results in this promise. Check the one below
+      .then(function (z) {
+        // NOTE: You ONLY get tempcompanymatch results here not the united results
       })
       .catch(function (err) { console.error(err) })
     })
     .then(function (results) {
   // Add results to events table
-      if (!results[0]) {
+      if (results[0]) {
         addMatchEvents(results, memberid)
       } else {
         removeTempTables(memberid)
@@ -942,6 +1032,9 @@ function addSearchResults (searchresults, memberid) {
   console.log('addSearchResults')
   var tempresults = []
   var i = searchresults.length
+  if (i === 0) {
+    removeTempTables(memberid)
+  }
   knex('searchresults')
     .pluck('eventid')
     .where('searchmemberid', memberid)
