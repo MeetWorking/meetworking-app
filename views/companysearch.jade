@@ -7,5 +7,15 @@ block content
   .container
     .row
       .col-md-8.col-md-offset-1
-        h3 Searching #{companyname}
+        if saved
+          h3 Searching #{companyname}
+          a.btn.btn-default(href="/remove/#{companyname}") Remove company
+        else if full
+          h3.colortemp Searching #{companyname}
+          s Save company
+          br
+          p Please remove a company in order to save.
+        else
+          h3.colortemp Searching #{companyname}
+          a.btn.btn-default(href="/save/#{companyname}") Save company
         .backbone

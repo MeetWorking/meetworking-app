@@ -112,4 +112,19 @@ $(function () {
     e.preventDefault()
     // custom handling here
   })
+  $('#remove-searchcompany1').click(function (e) {
+    $('#searchcompany1').attr('readonly', false).removeClass('color1').val('')
+    $('#remove-searchcompany1').hide()
+    e.preventDefault()
+  })
+  $('#remove-searchcompany2').click(function (e) {
+    $('#searchcompany2').attr('readonly', false).removeClass('color2').val('')
+    $('#remove-searchcompany2').hide()
+    e.preventDefault()
+  })
+  $('#remove-searchcompany3').click(function (e) {
+    $('#searchcompany3').attr('readonly', false).removeClass('color3').val('')
+    $('#remove-searchcompany3').hide()
+    e.preventDefault()
+  })
 })

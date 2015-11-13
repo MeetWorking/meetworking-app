@@ -20,7 +20,10 @@ var knex = require('knex')(config.AWS)
 router.get('/', function (req, res, next) {
   if (req.user) { // Determine if user is currently logged in
     knex('searches')
-      .where('memberid', req.user.memberid)
+      .where({
+        memberid: req.user.memberid,
+        type: 'perm'
+      })
       .then(function (result) {
         res.render('dashboard', { title: 'Dashboard', user: req.user, companies: result })
       })
@@ -122,7 +125,8 @@ router.get('/searchresults', function (req, res, next) {
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
     .where({
       'searchresults.searchmemberid': memberid,
-      'searches.memberid': memberid
+      'searches.memberid': memberid,
+      'searches.type': 'perm'
     })
     .then(function (result1) {
       knex('searchresults')
@@ -131,7 +135,8 @@ router.get('/searchresults', function (req, res, next) {
         .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
         .where({
           'searchresults.searchmemberid': memberid,
-          'searches.memberid': memberid
+          'searches.memberid': memberid,
+          'searches.type': 'perm'
         })
         .then(function (result2) {
           result1.forEach(function (e, i) {
@@ -154,7 +159,10 @@ router.get('/searchresults', function (req, res, next) {
             return a.datetime - b.datetime
           })
           knex('searches')
-            .where('memberid', req.user.memberid)
+            .where({
+              'memberid': req.user.memberid,
+              'type': 'perm'
+            })
             .then(function (companies) {
               result1.forEach(function (elem, ind) {
                 elem.companies = companies
@@ -244,41 +252,53 @@ router.get('/joinerror/:groupname', function (req, res, next) {
 })
 
 router.get('/company/:name', function (req, res, next) {
-  var companyname = req.params.name.replace(/\+/, ' ')
+  var companyname = req.params.name.replace(/\+/g, ' ')
+  var full
   knex('searches')
+    .pluck('uid')
     .where({
       memberid: req.user.memberid,
-      searchcompany: companyname
+      type: 'perm'
     })
     .then(function (result) {
-      console.log('got a result: ', result)
-      if (!result[0]) {
-        knex('searches')
-          .where({
-            memberid: req.user.memberid,
-            type: 'temp'
-          })
-          .del()
-          .then(function () {
+      full = result.length === 3
+      knex('searches')
+        .where({
+          memberid: req.user.memberid,
+          searchcompany: companyname
+        })
+        .then(function (result) {
+          console.log('got a result: ', result)
+          if (!result[0]) {
             knex('searches')
-              .insert({
+              .where({
                 memberid: req.user.memberid,
-                searchcompany: companyname,
                 type: 'temp'
               })
+              .del()
               .then(function () {
-                console.log('starting search-------')
-                startSearch([companyname], req.user.memberid, req.user.accesstoken, true)
+                knex('searches')
+                  .insert({
+                    memberid: req.user.memberid,
+                    searchcompany: companyname,
+                    type: 'temp'
+                  })
+                  .then(function () {
+                    console.log('starting search-------')
+                    startSearch([companyname], req.user.memberid, req.user.accesstoken, true)
+                  })
               })
-          })
-      } else {
-        res.render('companysearch', {companyname: companyname})
-      }
+          } else if (result[0].type === 'temp') {
+            res.render('companysearch', {companyname: companyname, saved: false, full})
+          } else {
+            res.render('companysearch', {companyname: companyname, saved: true, full})
+          }
+        })
+        .catch(function (err) { console.error(err) })
     })
-    .catch(function (err) { console.error(err) })
   function renderSearch () {
     console.log('rendering companysearch from /company/:name')
-    res.render('companysearch', {companyname: companyname})
+    res.render('companysearch', {companyname: companyname, saved: false, full})
   }
   ee.removeAllListeners('dataready')
   ee.on('dataready', renderSearch)
@@ -286,7 +306,7 @@ router.get('/company/:name', function (req, res, next) {
 
 router.get('/company/:name/results', function (req, res, next) {
   var memberid = req.user.memberid
-  var companyname = req.params.name.replace(/\+/, ' ')
+  var companyname = req.params.name.replace(/\+/g, ' ')
   // Jeff Spreadsheet functions:
   knex('searchresults')
     .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
@@ -329,7 +349,10 @@ router.get('/company/:name/results', function (req, res, next) {
             return a.datetime - b.datetime
           })
           knex('searches')
-            .where('memberid', req.user.memberid)
+            .where({
+              memberid: req.user.memberid,
+              type: 'perm'
+            })
             .then(function (companies) {
               result1.forEach(function (elem, ind) {
                 elem.companies = companies
@@ -418,6 +441,98 @@ router.post('/company/:name/results', function (req, res, next) {
       }
     }
   )
+})
+
+router.get('/settings', function (req, res, next) {
+  knex('searches')
+    .pluck('searchcompany')
+    .where({
+      memberid: req.user.memberid,
+      type: 'perm'
+    })
+    .then(function (companies) {
+      res.render('signup', {title: 'Meetworking', user: req.user, settings: true, companies: companies})
+    })
+})
+
+router.post('/settings', function (req, res, next) {
+  // variables for whole scope
+  var memberid = req.user.memberid
+  var accesstoken = req.user.accesstoken
+  var form = req.body
+  var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
+  console.log('companies are now: ', companies)
+
+  // Update members table with profile data
+  // NOTE: The company parameter is used to test if a user has signed up or not.
+  //       Even if empty string, it will allow a user to sign in directly to
+  //       their dashboard.
+  saveProfile(memberid, req.body)
+
+  // Update socialmedialinks table if the user has authenticated with LinkedIn
+  // Returns new req.user with linkedIn property deleted
+  req.user = addLinkedIn(req.user)
+
+  // Update searches table with three companies
+  knex('searches')
+    .pluck('searchcompany')
+    .where({
+      memberid,
+      type: 'perm'
+    })
+    .then(function (dbcompanies) {
+      var newcomp = _.difference(companies, dbcompanies)
+      console.log('newcomp: ', newcomp)
+      var oldcomp = _.difference(dbcompanies, companies)
+      console.log('oldcomp: ', oldcomp)
+      knex('searches')
+        .whereIn('searchcompany', oldcomp)
+        .del()
+        .then(function () {
+          newcomp.forEach(function (e, i) {
+            if (e.length > 2) {
+              addCompany(memberid, e)
+            }
+          })
+        })
+    })
+
+  // Begin company search
+  startSearch(companies, memberid, accesstoken)
+  function renderDash () {
+    console.log('redirecting from POST /signup to /')
+    // Send to dashboard
+    res.redirect('/')
+  }
+  ee.removeAllListeners('dataready')
+  ee.on('dataready', renderDash)
+})
+
+router.get('/save/:company', function (req, res, next) {
+  // http://www.google.com/what%20ever
+  var company = req.params.company.replace(/%20/g, ' ')
+  knex('searches')
+    .where({
+      memberid: req.user.memberid,
+      searchcompany: company
+    })
+    .update('type', 'perm')
+    .then(function () {
+      res.redirect('/')
+    })
+})
+
+router.get('/remove/:company', function (req, res, next) {
+  var company = req.params.company.replace(/%20/g, ' ')
+  knex('searches')
+    .where({
+      memberid: req.user.memberid,
+      searchcompany: company
+    })
+    .del()
+    .then(function () {
+      res.redirect('/')
+    })
 })
 
 // ----------------------------------------------------------------------------
@@ -827,6 +942,10 @@ function searchCompanies (memberid, companysearch) {
               var companymatches = []
               var membersearch = result
               var i = result.length
+              if (i === 0) {
+                console.log('no search companies found.')
+                removeTempTables(memberid)
+              }
               result.forEach(function (e) {
                 knex
                   .pluck('eventid')

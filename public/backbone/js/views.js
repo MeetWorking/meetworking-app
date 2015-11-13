@@ -40,7 +40,7 @@ var GUI = (function () {
         $attendance = $('<h5 class="rsvps">').text(this.model.get('rsvps') + ' attending') // + this.model.get('meetworkers') + ' MeetWorkers, ' + this.model.get('recruiters') + ' Recruiters')
       }
       var uids = _.pluck(this.model.get('companies'), 'uid')
-      // console.log('this.model.get(companies): ', this.model.get('companies'))
+      console.log('this.model.get(companies): ', this.model.get('companies'))
       this.model.get('searchuids').forEach(function (searchuid, index) {
         if (uids.indexOf(searchuid.searchuid) === 0) {
           // set color1 class
@@ -65,6 +65,14 @@ var GUI = (function () {
           }
           if (searchuid.employeematch) {
             $attendance.addClass('color3')
+          }
+        } else if (searchuid.searchuid) {
+          // Temp company or unhandled company
+          if (searchuid.companymatch) {
+            $location.addClass('colortemp')
+          }
+          if (searchuid.employeematch) {
+            $attendance.addClass('colortemp')
           }
         }
       })
