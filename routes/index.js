@@ -535,6 +535,14 @@ router.get('/remove/:company', function (req, res, next) {
     })
 })
 
+router.get('/eventrsvps/:eventid', function (req, res, next) {
+  res.render('eventrsvps', {eventid: req.params.eventid})
+})
+
+router.get('/eventrsvps/:eventid/results', function (req, res, next) {
+
+})
+
 // ----------------------------------------------------------------------------
 // 3. New user signup functions
 // ----------------------------------------------------------------------------
