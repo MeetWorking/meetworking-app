@@ -70,6 +70,30 @@ var SearchResultModel = Backbone.Model.extend({
   }
 })
 
+var EventRsvpModel = Backbone.Model.extend({
+  defaults: {
+    // fields from events table
+    memberid: '',
+    usertypeid: '',
+    name: '',
+    company: '',
+    position: '',
+    meetupprofileurl: '',
+    imageurl: '',
+    meetupsentence: '',
+    careergoals: '',
+    socialmedialinks: [],
+    topics: [],
+    // Current member search companies
+    companies: []
+  },
+  initialize: function () {
+    console.log('new EventRsvpModel')
+		// run queries that will add properties to each model instance which represents the count of members attending an event that work for a saved search company
+		// update searchuids property with an array of objects that each contain searchuid, searchmemberid, rsvpstatus, companymatch, employeematch, searchcompany, and logourl
+  }
+})
+
 var SearchResultCollection = Backbone.Collection.extend({
   model: SearchResultModel,
   url: '/searchresults',
@@ -86,5 +110,15 @@ var CompanySearchCollection = Backbone.Collection.extend({
     console.log('new CompanySearchCollection')
     console.log(this.url)
     this.fetch()
+  }
+})
+
+var EventRsvpCollection = Backbone.Collection.extend({
+  model: EventRsvpModel,
+  url: window.location.pathname + '/results',
+  initialize: function (opts) {
+    console.log('new EventRsvpCollection')
+    console.log(this.url)
+    // this.fetch()
   }
 })
