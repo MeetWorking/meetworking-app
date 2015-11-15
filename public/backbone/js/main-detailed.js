@@ -57,7 +57,7 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var eventDetails = window.eventDetails = new EventRsvpCollection(sample)
+  var eventDetails = window.eventDetails = new EventRsvpCollection()
   var dashboard = new GUI(eventDetails, '.backbone')
   // $('#companysearch').submit(function (e) {
   //   $('.preloader').fadeIn(300)

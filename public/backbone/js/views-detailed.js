@@ -9,7 +9,7 @@ var GUI = (function () {
       var $photo = $('<img>')
         .attr({
           alt: 'Profile photo of ' + this.model.get(''),
-          src: this.model.get('imageurl')
+          src: this.model.get('imageurl') || 'https://static1.squarespace.com/static/50e70b75e4b0d5ee8b74860b/t/515602bfe4b0fc0d94666eb5/1364591296832/profile+blank.jpg'
         })
         .addClass('photo')
       var $name = $('<h3>')
@@ -110,19 +110,17 @@ var GUI = (function () {
     }
   })
 
-  var DashboardView = Backbone.View.extend({
+  var EventDetailedView = Backbone.View.extend({
     tagName: 'div',
-    id: 'search-results',
+    id: 'event-detailed',
     render: function () {
       this.container.append(this.$el)
-      console.log('DashboardView rendered')
+      console.log('EventDetailedView rendered')
     },
     initialize: function (opts) {
       _.extend(this, opts) // if (opts) {this.container = opts.container}
       this.render()
       var self = this
-      var selectedView = 'Recommended'
-      var selectedResults = this.collection.where({displaystatus: selectedView})
       this.collection.forEach(function (element, index, array) {
         var searchResult = new EventRsvpView({
           model: element,
@@ -143,7 +141,7 @@ var GUI = (function () {
   })
 
   function guiConstructor (searchResults, container) {
-    var dashboardView = new DashboardView({
+    var dashboardView = new EventDetailedView({
       collection: searchResults,
       container: $(container)
     })

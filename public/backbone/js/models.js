@@ -119,6 +119,6 @@ var EventRsvpCollection = Backbone.Collection.extend({
   initialize: function (opts) {
     console.log('new EventRsvpCollection')
     console.log(this.url)
-    // this.fetch()
+    this.fetch()
   }
 })
