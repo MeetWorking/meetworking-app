@@ -21,16 +21,27 @@ var flash = require('express-flash')
 var passport = require('passport')
 var MeetupStrategy = require('passport-meetup').Strategy
 var LinkedInStrategy = require('passport-linkedin').Strategy
-var config = require('./config')
-var MEETUP_KEY = config.MEETUP_KEY
-var MEETUP_SECRET = config.MEETUP_SECRET
-var LINKEDIN_KEY = config.LINKEDIN_KEY
-var LINKEDIN_SECRET = config.LINKEDIN_SECRET
+var MEETUP_KEY = process.env.MEETUP_KEY
+var MEETUP_SECRET = process.env.MEETUP_SECRET
+var LINKEDIN_KEY = process.env.LINKEDIN_KEY
+var LINKEDIN_SECRET = process.env.LINKEDIN_SECRET
 
 // ----------------------------------------------------------------------------
 // 1b. Knex setup
 // ----------------------------------------------------------------------------
-var knex = require('knex')(config.AWS)
+var knex = require('knex')({
+  client: 'mysql',
+  connection: {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE
+  },
+  pool: {
+    min: 0,
+    max: 30
+  }
+})
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -107,7 +118,7 @@ function addSocialMediaLinks (profile) {
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
-  callbackURL: 'http://localhost:3000/auth/meetup/callback'
+  callbackURL: 'http://localhost:5000/auth/meetup/callback'
 },
   function (token, tokenSecret, profile, done) {
     knex.select().from('members').where('memberid', profile.id)
@@ -175,7 +186,7 @@ passport.use(new MeetupStrategy({
 passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
   consumerSecret: LINKEDIN_SECRET,
-  callbackURL: 'http://localhost:3000/auth/linkedin/callback',
+  callbackURL: 'http://localhost:5000/auth/linkedin/callback',
   profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url', 'public-profile-url'],
   passReqToCallback: true
 },

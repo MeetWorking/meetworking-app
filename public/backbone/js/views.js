@@ -7,7 +7,8 @@ var GUI = (function () {
     render: function () {
       var date = moment(this.model.get('datetime')).format('dddd, MMMM D')
       var $date = $('<h2 class="date">').text(date)
-
+      var $link = $('<a>')
+        .attr('href', '/detailed/' + this.model.get())
       var $card = $('<div class="card">')
       //
       var $cardLeft = $('<div class="card-left">')

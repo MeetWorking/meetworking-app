@@ -9,8 +9,21 @@ var ee = new EventEmitter()
 // ----------------------------------------------------------------------------
 // 1. Knex setup
 // ----------------------------------------------------------------------------
-var config = require('../config')
-var knex = require('knex')(config.AWS)
+var knex = require('knex')({
+  client: 'mysql',
+  connection: {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE
+  },
+  pool: {
+    min: 0,
+    max: 30
+  }
+})
+var MEETUP_API = process.env.MEETUP_API
+console.log(process.env.MEETUP_API)
 
 // ----------------------------------------------------------------------------
 // 2. Express routes
@@ -535,6 +548,57 @@ router.get('/remove/:company', function (req, res, next) {
     })
 })
 
+router.get('/eventrsvps/:eventid', function (req, res, next) {
+  res.render('eventrsvps', {eventid: req.params.eventid})
+})
+
+router.get('/eventrsvps/:eventid/results', function (req, res, next) {
+  var finalrsvps = []
+  knex('rsvps')
+    .select('memberid', 'usertypeid', 'name', 'company', 'position', 'meetupprofileurl', 'imageurl', 'meetupbio', 'meetupgroupbios', 'careergoals')
+    .distinct()
+    .where('eventid', req.params.eventid)
+    .innerJoin('members', 'rsvps.rsvpmemberid', 'members.memberid')
+    .then(function (results) {
+      knex('searches')
+        .pluck('searchcompany')
+        .where({
+          memberid: req.params.memberid,
+          type: 'perm'
+        })
+        .then(function (searchcompanies) {
+          var length = results.length
+          if (length === 0) {
+            res.send({})
+          }
+          results.forEach(function (e, i) {
+            knex('topics')
+              .pluck('topic')
+              .where('memberid', e.memberid)
+              .then(function (topics) {
+                knex('socialmedialinks')
+                  .where('memberid', e.memberid)
+                  .then(function (socialmedialinks) {
+                    var temprsvp = e
+                    temprsvp.socialmedialinks = socialmedialinks
+                    temprsvp.topics = topics
+                    temprsvp.companies = searchcompanies
+                    finalrsvps.push(temprsvp)
+                    length--
+                    if (length === 0) {
+                      res.send(finalrsvps)
+                    }
+                  })
+              })
+          })
+        })
+    })
+})
+
+router.get('/addmembers', function (req, res, next) {
+  getAreaEvents()
+})
+
 // ----------------------------------------------------------------------------
 // 3. New user signup functions
 // ----------------------------------------------------------------------------
@@ -701,11 +765,16 @@ function getVenues (companies, memberid, accesstoken, companysearch) {
           venueIds.push(e.id)
         })
       }
+      if (venueIds.length === 0) {
+        urls = [memberEventsUrl, conciergeEventsUrl]
+        getEvents(urls, [], memberid, accesstoken, companysearch)
+      } else {
   // Build URL with venueids to find events at those venues
-      var apiVenueIds = venueIds.join('%2C+')
-      var venueEventUrl = 'https://api.meetup.com/2/events?&sign=true&photo-host=public&format=json&time=,2w&page=100&venue_id=' + apiVenueIds + '&access_token=' + accesstoken
-      urls = [memberEventsUrl, conciergeEventsUrl, venueEventUrl]
-      getEvents(urls, [], memberid, accesstoken, companysearch)
+        var apiVenueIds = venueIds.join('%2C+')
+        var venueEventUrl = 'https://api.meetup.com/2/events?&sign=true&photo-host=public&format=json&time=,2w&page=100&venue_id=' + apiVenueIds + '&access_token=' + accesstoken
+        urls = [memberEventsUrl, conciergeEventsUrl, venueEventUrl]
+        getEvents(urls, [], memberid, accesstoken, companysearch)
+      }
     })
   // If no companies were entered in the query, just get events for the member and their concierge
   } else {
@@ -733,6 +802,25 @@ function getEvents (urls, tempevents, memberid, accesstoken, companysearch) {
   // Build an object from each result
         var i = result.results.length
         console.log('total length: ', i)
+        if (i === 0 && urllength === 0) {
+  // Once all loops are finished, add tempevents
+          var finaltempevents = _.uniq(tempevents, 'eventid')
+          knex('tempevents' + memberid)
+            .insert(finaltempevents)
+            .catch(function (err) { console.error(err) })
+            .then(function () {
+              knex
+                .table('tempevents' + memberid)
+                .pluck('eventid')
+                .distinct('eventid')
+                .then(function (eids) {
+  // Build URL from eventids
+                  var eventids = eids.join('%2C')
+                  var rsvpurl = 'https://api.meetup.com/2/rsvps?&sign=true&photo-host=public&type=json&event_id=' + eventids + '&page=100&access_token=' + accesstoken
+                  getRSVPs(rsvpurl, [], memberid, companysearch)
+                })
+            })
+        }
         result.results.forEach(function (e) {
           var eventid = e.id
           var groupid = e.group.id
@@ -1035,6 +1123,7 @@ function addTempRsvpMatches (rsvpmatches, memberid) {
       .where('memberid', e.memberid)
       .distinct('eventid', 'memberid') // Added due to data repetition in temprsvps. shouldn't be necessary
       .then(function (memberrsvps) {
+        console.log('memberrsvps: ', memberrsvps)
         var z = memberrsvps.length
         if (memberrsvps.length) {
           memberrsvps.forEach(function (y) {
@@ -1045,6 +1134,7 @@ function addTempRsvpMatches (rsvpmatches, memberid) {
               eventid: y.eventid
             })
             z--
+            console.log('temprsvpmatches: ', temprsvpmatches)
           })
         }
         i--
@@ -1238,7 +1328,7 @@ function addSearchResults (searchresults, memberid) {
                     })
                     .catch(function (err) {
                       console.error(err)
-                      removeTempTables(memberid)
+                      addRsvps(memberid, searchresults)
                     })
                 }
               })
@@ -1262,9 +1352,9 @@ function addRsvps (memberid, searchresults) {
   // Get searchresultuid from searchresults table
   var i = membersearchresults.length
   if (i === 0) {
-    removeTempTables(memberid)
+    addNonMatchRsvps(memberid)
   }
-  var rsvps = []
+  var matchrsvps = []
   membersearchresults.forEach(function (e) {
     knex('searchresults')
       .where({
@@ -1273,7 +1363,7 @@ function addRsvps (memberid, searchresults) {
       })
       .then(function (result) {
         if (result[0]) {
-          rsvps.push({
+          matchrsvps.push({
             searchresultuid: result[0].uid,
             rsvpmemberid: e.memberid,
             eventid: result[0].eventid
@@ -1283,16 +1373,48 @@ function addRsvps (memberid, searchresults) {
         if (i === 0) {
   // Insert into RSVPs table
           knex('rsvps')
-            .insert(rsvps)
+            .insert(matchrsvps)
             .catch(function (err) { console.error(err) })
             .then(function () {
-  // Db tasks finished, drop temp tables
-              removeTempTables(memberid)
+              addNonMatchRsvps(memberid)
             })
         }
       })
   })
 } // End addRsvps
+
+// knex.select('*').from('users').leftJoin('accounts', function() {
+//   this.on('accounts.id', '=', 'users.account_id').orOn('accounts.owner_id', '=', 'users.id')
+// })
+function addNonMatchRsvps (memberid) {
+  knex('temprsvps' + memberid)
+    .distinct()
+    .select('searchresultuid', 'memberid as rsvpmemberid', 'temprsvps' + memberid + '.eventid')
+    .innerJoin('events', 'temprsvps' + memberid + '.eventid', 'events.eventid')
+    .leftJoin('rsvps', 'temprsvps' + memberid + '.memberid', 'rsvps.rsvpmemberid')
+    .whereRaw('(temprsvps' + memberid + '.memberid <> rsvps.rsvpmemberid AND temprsvps' + memberid + '.eventid <> rsvps.eventid) and searchresultuid is null')
+    // .leftJoin('rsvps', function () {
+    //   this.on('temprsvps' + memberid + '.memberid', '=', 'rsvps.rsvpmemberid').andOn('temprsvps' + memberid + '.eventid', '=', 'rsvps.eventid')
+    // })
+    // (function () {
+    //   this.whereNotIn('rsvpmemberid', function () {
+    //     this.select('rsvpmemberid').from('rsvps')
+    //   })
+    //   .andWhereNotIn('eventid', function () {
+    //     this.select('eventid').from('rsvps')
+    //   })
+    // })
+    // .whereNull('searchresultuid')
+    .then(function (nonmatchrsvps) {
+      console.log(nonmatchrsvps.length)
+  //     knex('rsvps')
+  //       .update(nonmatchrsvps)
+  //       .then(function () {
+  // Db tasks finished, drop temp tables
+          removeTempTables(memberid)
+  //       })
+    })
+}
 
 /**
  * Drop all temp tables.
@@ -1313,109 +1435,140 @@ function removeTempTables (memberid) {
 // 5. Member bio gathering functions
 // ----------------------------------------------------------------------------
 
+function getAreaEvents (url, eventarray, zip) {
+  var searchzip = zip || 97209
+  var eids = eventarray || []
+  var eventurl = url || 'https://api.meetup.com/2/open_events?&sign=true&photo-host=public&zip=' + searchzip + '&time=,1m&only=id&page=100&key=' + MEETUP_API
+  request(eventurl, function (error, response, body) {
+    if (!error && response.statusCode === 200) {
+      var eventsresult = JSON.parse(body)
+      eids = _.union(eids, _.pluck(eventsresult.results, 'id'))
+      console.log('currently holding: ', eids.length)
+// If there is another page of results, run getBios with the next page
+      if (eventsresult.meta.next !== '') {
+        console.log('getting another result')
+        getAreaEvents(eventsresult.meta.next, eids)
+      } else {
+        console.log('total events: ', eids.length)
+        ee.removeAllListeners('nextbatch')
+        ee.on('nextbatch', getMembers)
+        var eventids = eids.join('%2C')
+        var rsvpurl = 'https://api.meetup.com/2/rsvps?&sign=true&photo-host=public&type=json&event_id=' + eventids + '&only=member.member_id&page=100&key=' + MEETUP_API
+        request(rsvpurl, function (error, response, body) {
+          console.log('status: ', response.statusCode)
+          if (!error && response.statusCode === 200) {
+            var rsvpresult = JSON.parse(body)
+            console.log('rsvps: ', rsvpresult.results.length)
+          }
+        })
+      }
+    }
+  })
+}
+
 // REVIEW: Make this happen once per day at night
-// function getBios (url) {
-// // Request member bio data via Meetup members API
-//   request(url, function (error, response, body) {
-//     var members = []
-//     var socialmedias = []
-//     var topics = []
-//     if (!error && response.statusCode === 200) {
-//       var membersresult = JSON.parse(body)
-//       var i = membersresult.results.length
-//       membersresult.results.forEach(function (e) {
-// // Build member object
-//         var imageurl = ''
-//         if (e.photo) {
-//           imageurl = e.photo.photo_link || ''
-//         }
-//         var membersobj = {
-//           memberid: e.id,
-//           name: e.name,
-//           meetupprofileurl: e.link,
-//           imageurl,
-//           meetupbio: e.bio || '',
-//           usertypeid: 3,
-//           alerts: 'OFF'
-//         }
-//         var mediaservices = e.other_services
-// // Build social media object
-//         for (var key in mediaservices) {
-//           var socialmediaobj = {}
-//           socialmediaobj.memberid = e.id
-//           socialmediaobj.mediaprofileurl = mediaservices[key].identifier
-//
-//           switch (key) {
-//             case 'facebook':
-//               socialmediaobj.socialmediauid = 1
-//               break
-//             case 'twitter':
-//               socialmediaobj.socialmediauid = 2
-//               socialmediaobj.mediaprofileurl = 'http://twitter.com/' + mediaservices[key].identifier.slice(1)
-//               break
-//             case 'linkedin':
-//               socialmediaobj.socialmediauid = 3
-//               break
-//             case 'flickr':
-//               socialmediaobj.socialmediauid = 4
-//               break
-//             case 'tumblr':
-//               socialmediaobj.socialmediauid = 5
-//               break
-//             default:
-//               console.error('Unknown social media outlet')
-//           }
-//           socialmedias.push(socialmediaobj)
-//         }
-// // Build topic object
-//         for (var topic in e.topics) {
-//           var topicobj = {
-//             memberid: e.id,
-//             topic: e.topics[topic].name
-//           }
-//           topics.push(topicobj)
-//         }
-//         members.push(membersobj)
-//         i--
-// // If loop has finished, insert into members, socialmedialinks and topics tables
-//         if (i === 0) {
-//           knex('members')
-//             .insert(members)
-//             .catch(function (err) { console.error(err) })
-//             .then(function () {
-//               knex('socialmedialinks')
-//                 .insert(socialmedias)
-//                 .catch(function (err) { console.error(err) })
-//                 .then(function () {
-//                   knex('topics')
-//                     .insert(topics)
-//                     .catch(function (err) { console.error(err) })
-//                 })
-//             })
-// // If there is another page of results, run getBios with the next page
-//           if (membersresult.meta.next !== '') {
-//             getBios(membersresult.meta.next)
-//           } else {
-// // Find all members without meetupgroupbios and run each through getGroupBios
-// // Set a 10 second interval. 5 seconds was too frequent but another may be faster
-//             knex('members')
-//               .pluck('memberid')
-//               .whereNull('meetupgroupbios')
-//               .then(function (members) {
-//                 members.forEach(function (e, i) {
-//                   setTimeout((function (x) {
-//                     return function () { getGroupBios(e, accesstoken, []) }
-//                   })(i), 10000 * i)
-//                 })
-//                 // setTimeout(searchCompanies(), 10000 * members.length)
-//               })
-//               .catch(function (err) { console.error(err) })
-//           }
-//         }
-//       })
-//     }
-//   })
-// }
+function getBios (url, accesstoken) {
+// Request member bio data via Meetup members API
+  request(url, function (error, response, body) {
+    var members = []
+    var socialmedias = []
+    var topics = []
+    if (!error && response.statusCode === 200) {
+      var membersresult = JSON.parse(body)
+      var i = membersresult.results.length
+      membersresult.results.forEach(function (e) {
+// Build member object
+        var imageurl = ''
+        if (e.photo) {
+          imageurl = e.photo.photo_link || ''
+        }
+        var membersobj = {
+          memberid: e.id,
+          name: e.name,
+          meetupprofileurl: e.link,
+          imageurl,
+          meetupbio: e.bio || '',
+          usertypeid: 3,
+          alerts: 'OFF'
+        }
+        var mediaservices = e.other_services
+// Build social media object
+        for (var key in mediaservices) {
+          var socialmediaobj = {}
+          socialmediaobj.memberid = e.id
+          socialmediaobj.mediaprofileurl = mediaservices[key].identifier
+
+          switch (key) {
+            case 'facebook':
+              socialmediaobj.socialmediauid = 1
+              break
+            case 'twitter':
+              socialmediaobj.socialmediauid = 2
+              socialmediaobj.mediaprofileurl = 'http://twitter.com/' + mediaservices[key].identifier.slice(1)
+              break
+            case 'linkedin':
+              socialmediaobj.socialmediauid = 3
+              break
+            case 'flickr':
+              socialmediaobj.socialmediauid = 4
+              break
+            case 'tumblr':
+              socialmediaobj.socialmediauid = 5
+              break
+            default:
+              console.error('Unknown social media outlet')
+          }
+          socialmedias.push(socialmediaobj)
+        }
+// Build topic object
+        for (var topic in e.topics) {
+          var topicobj = {
+            memberid: e.id,
+            topic: e.topics[topic].name
+          }
+          topics.push(topicobj)
+        }
+        members.push(membersobj)
+        i--
+// If loop has finished, insert into members, socialmedialinks and topics tables
+        if (i === 0) {
+          knex('members')
+            .insert(members)
+            .catch(function (err) { console.error(err) })
+            .then(function () {
+              knex('socialmedialinks')
+                .insert(socialmedias)
+                .catch(function (err) { console.error(err) })
+                .then(function () {
+                  knex('topics')
+                    .insert(topics)
+                    .catch(function (err) { console.error(err) })
+                })
+            })
+// If there is another page of results, run getBios with the next page
+          if (membersresult.meta.next !== '') {
+            getBios(membersresult.meta.next)
+          } else {
+// Find all members without meetupgroupbios and run each through getGroupBios
+// Set a 10 second interval. 5 seconds was too frequent but another may be faster
+            knex('members')
+              .pluck('memberid')
+              .whereNull('meetupgroupbios')
+              .then(function (members) {
+                members.forEach(function (e, i) {
+                  setTimeout((function (x) {
+                    return function () { getGroupBios(e, accesstoken, []) }
+                  })(i), 10000 * i)
+                })
+                // setTimeout(searchCompanies(), 10000 * members.length)
+              })
+              .catch(function (err) { console.error(err) })
+          }
+        }
+      })
+    }
+  })
+}
 
 // ----------------------------------------------------------------------------
 // 6. RSVP functions

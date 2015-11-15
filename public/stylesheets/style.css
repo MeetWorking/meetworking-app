@@ -140,3 +140,55 @@ h2, h3, h4, h5 {
     margin: -100px 0 0 -73px;
     background: url('/assets/preloader.gif') no-repeat;
 }
+
+.photo {
+  width: 100%;
+  margin: 20px;
+}
+
+.messagelink {
+  margin: 20px;
+  display: inline-block;
+}
+
+.linkedinsearch {
+  margin-top: 5px;
+  display: inline-block;
+}
+
+.talkingpoints {
+  border: 1px solid black;
+  border-radius: 5px;
+  margin: 5px;
+}
+
+.facebookicon, .twittericon, .linkedinicon, .flickricon, .tumblricon {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.facebookicon {
+  background: url('/assets/facebook.svg') no-repeat;
+}
+
+.twittericon {
+  background: url('/assets/twitter.svg') no-repeat;
+}
+
+.linkedinicon {
+  background: url('/assets/linkedin.svg') no-repeat;
+}
+
+.flickricon {
+  background: url('/assets/flickr.svg') no-repeat;
+}
+
+.tumblricon {
+  background: url('/assets/tumblr.svg') no-repeat;
+}
+
+.attendee{
+  margin-bottom: 40px;
+}
