@@ -89,4 +89,7 @@ function onListening () {
     : 'port ' + addr.port
   debug('Listening on ' + bind)
 }
+
+console.log('host name: ', server.address())
+
 module.exports = server

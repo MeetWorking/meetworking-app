@@ -117,10 +117,13 @@ function addSocialMediaLinks (profile) {
   }
 }
 
+var meetupcallback = (process.env.HEROKU) ? 'https://meetworking.herokuapp.com/auth/meetup/callback' : 'http://localhost:5000/auth/meetup/callback'
+var linkedincallback = (process.env.HEROKU) ? 'https://meetworking.herokuapp.com/auth/linkedin/callback' : 'http://localhost:5000/auth/linkedin/callback'
+
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
-  callbackURL: 'http://localhost:5000/auth/meetup/callback'
+  callbackURL: meetupcallback
 },
   function (token, tokenSecret, profile, done) {
     knex.select().from('members').where('memberid', profile.id)
@@ -188,7 +191,7 @@ passport.use(new MeetupStrategy({
 passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
   consumerSecret: LINKEDIN_SECRET,
-  callbackURL: 'http://localhost:5000/auth/linkedin/callback',
+  callbackURL: linkedincallback,
   profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url', 'public-profile-url'],
   passReqToCallback: true
 },
