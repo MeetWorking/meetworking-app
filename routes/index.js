@@ -23,6 +23,7 @@ var knex = require('knex')({
   }
 })
 var MEETUP_API = process.env.MEETUP_API
+console.log(process.env.MEETUP_API)
 
 // ----------------------------------------------------------------------------
 // 2. Express routes

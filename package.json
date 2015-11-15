@@ -21,6 +21,7 @@
     "moment": "^2.10.6",
     "morgan": "~1.6.1",
     "mysql": "^2.9.0",
+    "nodemon": "^1.8.1",
     "passport": "~0.3.0",
     "passport-linkedin": "~1.0.0",
     "passport-meetup": "~1.0.0",

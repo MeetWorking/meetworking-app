@@ -118,7 +118,7 @@ function addSocialMediaLinks (profile) {
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
   consumerSecret: MEETUP_SECRET,
-  callbackURL: 'http://localhost:3000/auth/meetup/callback'
+  callbackURL: 'http://localhost:5000/auth/meetup/callback'
 },
   function (token, tokenSecret, profile, done) {
     knex.select().from('members').where('memberid', profile.id)
@@ -186,7 +186,7 @@ passport.use(new MeetupStrategy({
 passport.use(new LinkedInStrategy({
   consumerKey: LINKEDIN_KEY,
   consumerSecret: LINKEDIN_SECRET,
-  callbackURL: 'http://localhost:3000/auth/linkedin/callback',
+  callbackURL: 'http://localhost:5000/auth/linkedin/callback',
   profileFields: ['id', 'first-name', 'last-name', 'headline', 'positions', 'summary', 'picture-url', 'public-profile-url'],
   passReqToCallback: true
 },
