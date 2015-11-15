@@ -9,9 +9,20 @@ var ee = new EventEmitter()
 // ----------------------------------------------------------------------------
 // 1. Knex setup
 // ----------------------------------------------------------------------------
-var config = require('../config')
-var knex = require('knex')(config.AWS)
-var MEETUP_API = config.MEETUP_API
+var knex = require('knex')({
+  client: 'mysql',
+  connection: {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE
+  },
+  pool: {
+    min: 0,
+    max: 30
+  }
+})
+var MEETUP_API = process.env.MEETUP_API
 
 // ----------------------------------------------------------------------------
 // 2. Express routes

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./bin/www",
+    "start": "nf start",
     "test": "jasmine"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "express": "~4.13.1",
     "express-flash": "0.0.2",
     "express-session": "~1.11.3",
+    "foreman": "1.4.1",
     "jade": "~1.11.0",
     "jquery": "^2.1.4",
     "knex": "^0.8.6",
