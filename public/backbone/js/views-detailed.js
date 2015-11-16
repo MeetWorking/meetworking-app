@@ -85,7 +85,7 @@ var RsvpGUI = (function () {
           .addClass('careergoals')
         $talkingpoints.append($careergoals)
       }
-      if (!this.model.get('meetupsentence') && !this.model.get('topics') && !this.model.get('careergoals')) {
+      if (!this.model.get('meetupsentence') && !this.model.get('topics')[0] && !this.model.get('careergoals')) {
         var $empty = $('<li>')
           .text("Sorry, we didn't find anything on Meetup.com. Try something random.")
         $talkingpoints.append($empty)
@@ -108,16 +108,22 @@ var RsvpGUI = (function () {
       $cardright.append($messagelink)
       $card.append($cardleft).append($cardmid).append($cardright)
       var matchsearchuid = this.model.get('searchuid')
-      var allsearches = _.pluck(this.model.get('companies'), 'uid')
+      var allsearches = this.model.get('companies')
       var allnames = _.pluck(this.model.get('companies'), 'searchcompany')
       console.log('allsearches: ', allsearches)
       console.log('allnames: ', allnames)
       console.log('sruid: ', matchsearchuid)
       allsearches.forEach(function (searchuid, index) {
-        if (matchsearchuid === searchuid) {
+        if (matchsearchuid === searchuid.uid) {
           console.log('match!')
-          $card.addClass('color' + (index + 1))
-          $positioncompany.text(allnames[index])
+          if (searchuid.type === 'temp') {
+            $card.addClass('colortemp')
+            $messagelink.addClass('colortemp')
+          } else {
+            $card.addClass('color' + (index + 1))
+            $messagelink.addClass('color' + (index + 1))
+            $positioncompany.text(allnames[index])
+          }
         }
       })
       $('.attendee a').attr('target', '_blank')

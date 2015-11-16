@@ -56,10 +56,10 @@ router.get('/signup', function (req, res, next) {
         // test if LinkedIn account has been linked
         if (req.user.linkedIn) {
           console.log('-----LinkedIn found-----')
-          res.render('signup', {title: 'Meetworking', user: result[0], linkedIn: req.user.linkedIn._json})
+          res.render('signup', {title: 'Meetworking', user: result[0], linkedIn: req.user.linkedIn._json, settings: false})
         } else {
           console.log('-----No LinkedIn Yet, but result.company not found-----')
-          res.render('signup', {title: 'Meetworking', user: result[0]})
+          res.render('signup', {title: 'Meetworking', user: result[0], settings: false})
         }
       } else {
         console.log('-----Welcome back!-----')
@@ -561,8 +561,7 @@ router.get('/eventrsvps/:eventid/results', function (req, res, next) {
     .then(function (results) {
       knex('searches')
         .where({
-          memberid: req.user.memberid,
-          type: 'perm'
+          memberid: req.user.memberid
         })
         .then(function (searchcompanies) {
           console.log('searchcompanies: ', searchcompanies)
@@ -609,14 +608,13 @@ router.get('/eventrsvps/:eventid/singleevent', function (req, res, next) {
   var memberid = req.user.memberid
   // Jeff Spreadsheet functions:
   knex('searchresults')
-    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.groupurlname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.groupurlname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searches.type', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
     .select()
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
     .where({
       'searchresults.searchmemberid': memberid,
       'searches.memberid': memberid,
-      'searches.type': 'perm',
       'events.eventid': req.params.eventid
     })
     .then(function (result1) {
@@ -658,6 +656,7 @@ router.get('/eventrsvps/:eventid/singleevent', function (req, res, next) {
               result1.forEach(function (elem, ind) {
                 elem.companies = companies
               })
+              console.log('result1[0]: ', result1[0])
               res.send(result1)
             })
         })

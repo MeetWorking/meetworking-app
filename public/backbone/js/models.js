@@ -86,6 +86,7 @@ var EventRsvpModel = Backbone.Model.extend({
     socialmedialinks: [],
     topics: [],
     searchuid: '',
+    type: '',
     // Current member search companies
     companies: []
   },
