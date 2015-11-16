@@ -131,7 +131,7 @@ router.get('/searchresults', function (req, res, next) {
   var memberid = req.user.memberid
   // Jeff Spreadsheet functions:
   knex('searchresults')
-    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.groupurlname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
     .select()
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
@@ -258,9 +258,9 @@ router.post('/searchresults', function (req, res, next) {
   )
 })
 
-router.get('/joinerror/:groupname', function (req, res, next) {
-  var joined = req.params.groupname.split(' ').join('+')
-  res.render('joinerror', { groupname: joined })
+router.get('/joinerror/:groupurlname', function (req, res, next) {
+  var joined = req.params.groupurlname
+  res.render('joinerror', { groupurlname: joined })
 })
 
 router.get('/company/:name', function (req, res, next) {
@@ -321,7 +321,7 @@ router.get('/company/:name/results', function (req, res, next) {
   var companyname = req.params.name.replace(/\+/g, ' ')
   // Jeff Spreadsheet functions:
   knex('searchresults')
-    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.groupurlname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
     .select()
     .innerJoin('events', 'searchresults.eventid', 'events.eventid')
     .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
@@ -729,7 +729,7 @@ function addGroupBios (memberid, meetupgroupbios) {
 function startSearch (companies, memberid, accesstoken, companysearch) {
   console.log('startSearch')
   // Using raw due to knex's lack of builtin FULLTEXT index support for MySQL
-  knex.raw('create table tempevents' + memberid + ' (`eventid` varchar(255), `groupid` varchar(255), `groupname` varchar(45), `title` varchar(180), `description` text, `location` text, `datetime` bigint, `status` varchar(45), `rsvps` int, `spotsleft` int, FULLTEXT KEY location (location))')
+  knex.raw('create table tempevents' + memberid + ' (`eventid` varchar(255), `groupid` varchar(255), `groupname` varchar(45), `groupurlname` text, `title` varchar(180), `description` text, `location` text, `datetime` bigint, `status` varchar(45), `rsvps` int, `spotsleft` int, FULLTEXT KEY location (location))')
     .then(getVenues(companies, memberid, accesstoken, companysearch))
     .catch(function (err) { console.error(err) })
 } // End startSearch
@@ -824,6 +824,7 @@ function getEvents (urls, tempevents, memberid, accesstoken, companysearch) {
           var eventid = e.id
           var groupid = e.group.id
           var groupname = e.group.name
+          var groupurlname = e.group.urlname
           var title = e.name
           var description = e.description
           var location
@@ -836,7 +837,7 @@ function getEvents (urls, tempevents, memberid, accesstoken, companysearch) {
           var status = e.status
           var rsvps = e.yes_rsvp_count
           var spotsleft = e.rsvp_limit - e.yes_rsvp_count || null
-          tempevents.push({ eventid, groupid, groupname, title, description, location, datetime, status, rsvps, spotsleft })
+          tempevents.push({ eventid, groupid, groupname, groupurlname, title, description, location, datetime, status, rsvps, spotsleft })
           i--
           if (i === 0) {
             urllength--
