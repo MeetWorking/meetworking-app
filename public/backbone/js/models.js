@@ -85,6 +85,7 @@ var EventRsvpModel = Backbone.Model.extend({
     careergoals: '',
     socialmedialinks: [],
     topics: [],
+    searchuid: '',
     // Current member search companies
     companies: []
   },
@@ -98,7 +99,7 @@ var EventRsvpModel = Backbone.Model.extend({
 var SearchResultCollection = Backbone.Collection.extend({
   model: SearchResultModel,
   url: '/searchresults',
-  initialize: function () {
+  initialize: function (opts) {
     console.log('new SearchResultCollection')
     this.fetch()
   }
@@ -120,6 +121,15 @@ var EventRsvpCollection = Backbone.Collection.extend({
   initialize: function (opts) {
     console.log('new EventRsvpCollection')
     console.log(this.url)
+    this.fetch()
+  }
+})
+
+var SingleEventCollection = Backbone.Collection.extend({
+  model: SearchResultModel,
+  url: window.location.pathname + '/singleevent',
+  initialize: function (opts) {
+    console.log('new SearchResultCollection')
     this.fetch()
   }
 })

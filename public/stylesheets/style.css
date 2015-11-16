@@ -96,28 +96,70 @@ h2, h3, h4, h5 {
 
 .rsvps {
   font-family: "Lora", "Times New Roman", serif;
-  padding-top: 5px;
+  padding: 5px;
+  height: 28px;
+  max-width: 120px;
 }
 
 /*https://coolors.co/app/2b2d42-8d99ae-edf2f4-ef233c-d90429*/
 .color1 {
-  border: 3px solid #da5d06;
-  color: #da5d06;
+  /*border: 3px solid #da5d06;
+  color: #da5d06;*/
+  background: repeating-linear-gradient(
+    45deg,
+    #da5d06,
+    #da5d06 10px,
+    #e58d50 10px,
+    #e58d50 20px
+  );
+  color: white;
+  max-height: 32px;
+  max-width: 340px;
 }
 
 .color2 {
-  border: 3px solid #339d17;
-  color: #339d17;
+  /*border: 3px solid #339d17;
+  color: #339d17;*/
+  background: repeating-linear-gradient(
+    45deg,
+    #339d17,
+    #339d17 10px,
+    #70ba5c 10px,
+    #70ba5c 20px
+  );
+  color: white;
+  max-height: 32px;
+  max-width: 340px;
 }
 
 .color3 {
-  border: 3px solid #13141d;
-  color: #13141d;
+  /*border: 3px solid #13141d;
+  color: #13141d;*/
+  background: repeating-linear-gradient(
+    45deg,
+    #272f45,
+    #272f45 10px,
+    #6f7583 10px,
+    #6f7583 20px
+  );
+  color: white;
+  max-height: 32px;
+  max-width: 340px;
 }
 
 .colortemp {
-  border: 3px solid #1BE7FF;
-  color: #1BE7FF;
+  /*border: 3px solid #1BE7FF;
+  color: #1BE7FF;*/
+  background: repeating-linear-gradient(
+    45deg,
+    #1BE7FF,
+    #1BE7FF 10px,
+    #5feeff 10px,
+    #5feeff 20px
+  );
+  color: white;
+  max-height: 32px;
+  max-width: 340px;
 }
 
 .preloader{
@@ -191,4 +233,12 @@ h2, h3, h4, h5 {
 
 .attendee{
   margin-bottom: 40px;
+}
+
+.backbone-event #single-result {
+  margin-bottom: 20px;
+  padding: 10px;
+  border: 5px solid white;
+  border-radius: 5px;
+  background-color: white;
 }

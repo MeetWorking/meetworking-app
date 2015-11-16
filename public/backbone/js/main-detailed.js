@@ -1,4 +1,4 @@
-/* globals $, EventRsvpCollection, GUI */
+/* globals $, EventRsvpCollection, RsvpGUI, SingleEventCollection */
 
 var sample = [
   {
@@ -57,8 +57,9 @@ var sample = [
 
 $(function () {
   console.log('ready!')
-  var eventDetails = window.eventDetails = new EventRsvpCollection()
-  var dashboard = new GUI(eventDetails, '.backbone')
+  var eventRsvps = window.eventRsvps = new EventRsvpCollection()
+  var singleEvent = new SingleEventCollection()
+  var dashboard = new RsvpGUI(eventRsvps, singleEvent, '.backbone')
   // $('#companysearch').submit(function (e) {
   //   $('.preloader').fadeIn(300)
   //   var url = window.location.origin + '/company/' + $('#companysearchval').val().replace(/ /g, '+')

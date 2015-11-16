@@ -18,7 +18,9 @@ var GUI = (function () {
       $cardLeft.append($time)
       //
       var $cardRight = $('<div class="card-right">')
-      var $title = $('<h3 class="title">').text(this.model.get('title'))
+      var $title = $('<a>').attr('href', '/eventrsvps/' + this.model.get('eventid'))
+      var $titletext = $('<h3 class="title">').text(this.model.get('title'))
+      $title.append($titletext)
       var $group = $('<p class="group">').text(this.model.get('groupname'))
       //
       //
