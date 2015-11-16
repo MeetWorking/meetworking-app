@@ -665,7 +665,17 @@ router.get('/eventrsvps/:eventid/singleevent', function (req, res, next) {
 })
 
 router.get('/addmembers', function (req, res, next) {
-  getAreaEvents()
+  knex('members')
+    .pluck('memberid')
+    .whereNull('meetupgroupbios')
+    .then(function (members) {
+      members.forEach(function (e, i) {
+        var biosurl = 'https://api.meetup.com/2/profiles?&sign=true&format=json&photo-host=public&member_id=' + e + '&page=100&key=' + MEETUP_API
+        setTimeout((function (x) {
+          return function () { getGroupBios(e, false, [], biosurl) }
+        })(i), 1000 * i)
+      })
+    })
 })
 
 // ----------------------------------------------------------------------------
