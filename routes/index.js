@@ -554,21 +554,21 @@ router.get('/eventrsvps/:eventid', function (req, res, next) {
 router.get('/eventrsvps/:eventid/results', function (req, res, next) {
   var finalrsvps = []
   knex('rsvps')
-    .select('memberid', 'usertypeid', 'name', 'company', 'position', 'meetupprofileurl', 'imageurl', 'meetupbio', 'meetupgroupbios', 'careergoals')
+    .select('memberid', 'usertypeid', 'name', 'company', 'position', 'meetupprofileurl', 'imageurl', 'meetupbio', 'meetupgroupbios', 'careergoals', 'searchresultuid')
     .distinct()
     .where('eventid', req.params.eventid)
     .innerJoin('members', 'rsvps.rsvpmemberid', 'members.memberid')
     .then(function (results) {
       knex('searches')
-        .pluck('searchcompany')
         .where({
-          memberid: req.params.memberid,
+          memberid: req.user.memberid,
           type: 'perm'
         })
         .then(function (searchcompanies) {
+          console.log('searchcompanies: ', searchcompanies)
           var length = results.length
           if (length === 0) {
-            res.send({})
+            res.send()
           }
           results.forEach(function (e, i) {
             knex('topics')
@@ -578,18 +578,88 @@ router.get('/eventrsvps/:eventid/results', function (req, res, next) {
                 knex('socialmedialinks')
                   .where('memberid', e.memberid)
                   .then(function (socialmedialinks) {
-                    var temprsvp = e
-                    temprsvp.socialmedialinks = socialmedialinks
-                    temprsvp.topics = topics
-                    temprsvp.companies = searchcompanies
-                    finalrsvps.push(temprsvp)
-                    length--
-                    if (length === 0) {
-                      res.send(finalrsvps)
-                    }
+                    knex('searchresults')
+                      .pluck('searchuid')
+                      .where({
+                        eventid: req.params.eventid,
+                        searchmemberid: req.user.memberid
+                      })
+                      .then(function (searchuid) {
+                        var temprsvp = e
+                        if (temprsvp.searchresultuid) {
+                          temprsvp.searchuid = searchuid[0]
+                        }
+                        temprsvp.socialmedialinks = socialmedialinks
+                        temprsvp.topics = topics
+                        temprsvp.companies = searchcompanies
+                        finalrsvps.push(temprsvp)
+                        length--
+                        if (length === 0) {
+                          res.send(finalrsvps)
+                        }
+                      })
                   })
               })
           })
+        })
+    })
+})
+
+router.get('/eventrsvps/:eventid/singleevent', function (req, res, next) {
+  var memberid = req.user.memberid
+  // Jeff Spreadsheet functions:
+  knex('searchresults')
+    .distinct('events.eventid', 'events.groupid', 'events.groupname', 'events.groupurlname', 'events.title', 'events.description', 'events.location', 'events.datetime', 'events.status', 'events.rsvps', 'events.spotsleft', 'events.meetworkers', 'events.recruiters', 'searchresults.rsvpstatus', 'searchresults.status as displaystatus')
+    .select()
+    .innerJoin('events', 'searchresults.eventid', 'events.eventid')
+    .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
+    .where({
+      'searchresults.searchmemberid': memberid,
+      'searches.memberid': memberid,
+      'searches.type': 'perm',
+      'events.eventid': req.params.eventid
+    })
+    .then(function (result1) {
+      knex('searchresults')
+        .distinct('searchresults.uid', 'searchresults.eventid', 'searchresults.searchuid', 'searchresults.searchmemberid', 'searchresults.rsvpstatus', 'searchresults.companymatch', 'searchresults.employeematch', 'searches.searchcompany', 'searches.logourl')
+        .select()
+        .innerJoin('searches', 'searchresults.searchuid', 'searches.uid')
+        .where({
+          'searchresults.searchmemberid': memberid,
+          'searches.memberid': memberid,
+          'searches.type': 'perm'
+        })
+        .then(function (result2) {
+          result1.forEach(function (e, i) {
+            // Get relevant eventids from result2
+            var newResult2 = result2.filter(function (element, index, array) {
+              return ('eventid' in element && element['eventid'] === e.eventid)
+            })
+            newResult2 = newResult2.map(function (element, index, array) {
+              var object = {}
+              for (var key in element) {
+                if (key !== 'searchresults.uid' && key !== 'searchresults.eventid') {
+                  object[key] = element[key]
+                }
+              }
+              return object
+            })
+            result1[i].searchuids = newResult2
+          })
+          result1.sort(function (a, b) {
+            return a.datetime - b.datetime
+          })
+          knex('searches')
+            .where({
+              'memberid': req.user.memberid,
+              'type': 'perm'
+            })
+            .then(function (companies) {
+              result1.forEach(function (elem, ind) {
+                elem.companies = companies
+              })
+              res.send(result1)
+            })
         })
     })
 })
@@ -917,71 +987,6 @@ function getRSVPs (rsvpurl, rsvps, memberid, companysearch) {
       }
     })
   }, 500)
-}
-
-function searchSingle (company, memberid) {
-  console.log('searchSingle')
-  // Create tempcompanymatches and temprsvpmatches tables
-  knex.schema
-    .createTable('tempcompanymatches' + memberid, function (table) {
-      table.integer('memberid')
-      table.integer('searchuid')
-      table.string('eventid')
-    })
-    .catch(function (err) { console.error(err) })
-  knex.schema
-    .createTable('temprsvpmatches' + memberid, function (table) {
-      table.integer('memberid')
-      table.integer('searchuid')
-      table.string('eventid')
-    })
-    .catch(function (err) { console.error(err) })
-    .then(function () {
-  // Using the three companies result, search the members and events tables for matching text
-      var rsvpmatches = []
-      var companymatches = []
-      knex
-        .pluck('eventid')
-        .from('events')
-        .orWhereRaw('MATCH(location) AGAINST(? IN BOOLEAN MODE)', company)
-        .then(function (eventids) {
-  // Build a tempcompanymatch object for each matching result
-          var ind = eventids.length
-          eventids.forEach(function (elem) {
-            var tempcompanymatch = {
-              eventid: elem,
-              searchuid: 0 // To signify a temporary search
-            }
-            companymatches.push(tempcompanymatch)
-            ind--
-          })
-          if (ind === 0) {
-  // Call function when all results added
-            addTempCompanyMatches(memberid, companymatches)
-          }
-        })
-  // Search through member bios with same three companies
-      knex
-        .pluck('memberid')
-        .from('members')
-        .orWhereRaw('MATCH(company, meetupbio, meetupgroupbios) AGAINST(? IN BOOLEAN MODE)', company)
-        .then(function (memberids) {
-  // Remove current user from member matches
-          var differencememberids = _.difference(memberids, [memberid])
-          var n = differencememberids.length
-          differencememberids.forEach(function (l) {
-            var temprsvpmatch = {
-              memberid: l,
-              searchuid: 0 // To signify a temporary search
-            }
-            rsvpmatches.push(temprsvpmatch)
-            n--
-          })
-          if (n === 0) {
-            addTempRsvpMatches(rsvpmatches, memberid)
-          }
-        })
-    })
 }
 
 /**
@@ -1387,32 +1392,14 @@ function addRsvps (memberid, searchresults) {
 //   this.on('accounts.id', '=', 'users.account_id').orOn('accounts.owner_id', '=', 'users.id')
 // })
 function addNonMatchRsvps (memberid) {
-  knex('temprsvps' + memberid)
-    .distinct()
-    .select('searchresultuid', 'memberid as rsvpmemberid', 'temprsvps' + memberid + '.eventid')
-    .innerJoin('events', 'temprsvps' + memberid + '.eventid', 'events.eventid')
-    .leftJoin('rsvps', 'temprsvps' + memberid + '.memberid', 'rsvps.rsvpmemberid')
-    .whereRaw('(temprsvps' + memberid + '.memberid <> rsvps.rsvpmemberid AND temprsvps' + memberid + '.eventid <> rsvps.eventid) and searchresultuid is null')
-    // .leftJoin('rsvps', function () {
-    //   this.on('temprsvps' + memberid + '.memberid', '=', 'rsvps.rsvpmemberid').andOn('temprsvps' + memberid + '.eventid', '=', 'rsvps.eventid')
-    // })
-    // (function () {
-    //   this.whereNotIn('rsvpmemberid', function () {
-    //     this.select('rsvpmemberid').from('rsvps')
-    //   })
-    //   .andWhereNotIn('eventid', function () {
-    //     this.select('eventid').from('rsvps')
-    //   })
-    // })
-    // .whereNull('searchresultuid')
+  knex.raw('SELECT DISTINCT temprsvps' + memberid + '.memberid as rsvpmemberid, temprsvps' + memberid + '.eventid, rsvps.searchresultuid FROM temprsvps' + memberid + ' INNER JOIN events ON temprsvps' + memberid + '.eventid = events.eventid LEFT JOIN rsvps ON temprsvps' + memberid + '.memberid = rsvps.rsvpmemberid AND temprsvps' + memberid + '.eventid = rsvps.eventid WHERE rsvps.searchresultuid IS NULL;')
     .then(function (nonmatchrsvps) {
-      console.log(nonmatchrsvps.length)
-  //     knex('rsvps')
-  //       .update(nonmatchrsvps)
-  //       .then(function () {
+      knex('rsvps')
+        .insert(nonmatchrsvps[0])
+        .then(function () {
   // Db tasks finished, drop temp tables
           removeTempTables(memberid)
-  //       })
+        })
     })
 }
 
@@ -1590,31 +1577,3 @@ module.exports.addLinkedIn = addLinkedIn
 module.exports.addCompany = addCompany
 module.exports.getGroupBios = getGroupBios
 module.exports.addGroupBios = addGroupBios
-
-// var z = [
-//   {
-//     id: 1,
-//     company: true,
-//     employee: false
-//   },
-//   {
-//     id: 1,
-//     company: false,
-//     employee: true
-//   },
-//   {
-//     id: 2,
-//     company: true,
-//     employee: false
-//   },
-//   {
-//     id: 3,
-//     company: true,
-//     employee: false
-//   },
-//   {
-//     id: 3,
-//     company: false,
-//     employee: true
-//   }
-// ]

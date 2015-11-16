@@ -25,8 +25,6 @@ var MEETUP_KEY = process.env.MEETUP_KEY
 var MEETUP_SECRET = process.env.MEETUP_SECRET
 var LINKEDIN_KEY = process.env.LINKEDIN_KEY
 var LINKEDIN_SECRET = process.env.LINKEDIN_SECRET
-console.log('MEETUP_KEY: ', MEETUP_KEY)
-console.log('typeof MEETUP_KEY: ', typeof MEETUP_KEY)
 
 // ----------------------------------------------------------------------------
 // 1b. Knex setup
