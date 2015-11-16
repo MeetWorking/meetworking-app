@@ -115,6 +115,8 @@ h2, h3, h4, h5 {
   color: white;
   max-height: 32px;
   max-width: 340px;
+  border: 5px solid #da5d06;
+  border-radius: 5px;
 }
 
 .color2 {
@@ -130,6 +132,8 @@ h2, h3, h4, h5 {
   color: white;
   max-height: 32px;
   max-width: 340px;
+  border: 5px solid #339d17;
+  border-radius: 5px;
 }
 
 .color3 {
@@ -145,6 +149,8 @@ h2, h3, h4, h5 {
   color: white;
   max-height: 32px;
   max-width: 340px;
+  border: 5px solid #272f45;
+  border-radius: 5px;
 }
 
 .colortemp {
@@ -160,6 +166,13 @@ h2, h3, h4, h5 {
   color: white;
   max-height: 32px;
   max-width: 340px;
+  border: 5px solid #1BE7FF;
+  border-radius: 5px;
+}
+
+div.color1, div.color2, div.color3, div.colortemp {
+  max-height: none;
+  max-width: none;
 }
 
 .preloader{
@@ -191,6 +204,11 @@ h2, h3, h4, h5 {
 .messagelink {
   margin: 20px;
   display: inline-block;
+}
+
+.messagelink.color1, .messagelink.color2, .messagelink.color3, .messagelink.colortemp {
+  background: none;
+  border: none;
 }
 
 .linkedinsearch {
@@ -241,4 +259,16 @@ h2, h3, h4, h5 {
   border: 5px solid white;
   border-radius: 5px;
   background-color: white;
+}
+
+#edit-profile label {
+  margin: 5px;
+}
+
+#edit-profile input {
+  margin: 5px;
+}
+
+#edit-profile input.companyfield {
+  margin: 5px;
 }
