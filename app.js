@@ -115,8 +115,8 @@ function addSocialMediaLinks (profile) {
   }
 }
 
-var meetupcallback = (process.env.HEROKU) ? 'https://meetworking.herokuapp.com/auth/meetup/callback' : 'http://localhost:5000/auth/meetup/callback'
-var linkedincallback = (process.env.HEROKU) ? 'https://meetworking.herokuapp.com/auth/linkedin/callback' : 'http://localhost:5000/auth/linkedin/callback'
+var meetupcallback = (process.env.HEROKU) ? 'https://meetworking.co/auth/meetup/callback' : 'http://localhost:5000/auth/meetup/callback'
+var linkedincallback = (process.env.HEROKU) ? 'https://meetworking.co/auth/linkedin/callback' : 'http://localhost:5000/auth/linkedin/callback'
 
 passport.use(new MeetupStrategy({
   consumerKey: MEETUP_KEY,
