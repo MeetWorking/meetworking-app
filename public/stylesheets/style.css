@@ -6,7 +6,7 @@
 .carousel-caption {
   text-align: center;
   bottom: 50%;
-  top: 25%;
+  top: 10%;
 }
 
 body {
@@ -283,4 +283,12 @@ div.color1, div.color2, div.color3, div.colortemp {
 
 .searchingcompany {
   padding-top: 50px;
+}
+
+.calltoaction {
+  background-color: #edf2f4;
+  padding: 20px;
+  border: 5px solid #edf2f4;
+  border-radius: 5px;
+  color: black;
 }
