@@ -764,15 +764,15 @@ function getGroupBios (memberid, accesstoken, groupBios, url) {
             groupBios.push(e.bio)
           }
         })
+        if (result.meta.next !== '') {
+          getGroupBios(memberid, accesstoken, groupBios, result.meta.next)
+          console.log('requesting next group bio...')
+        } else {
+          addGroupBios(memberid, groupBios.join('||'))
+        }
       } else {
         console.log('Error caught in getGroupBios API call: ', error)
         console.log('Error response code                  : ', response.statusCode)
-      }
-      if (result.meta.next !== '') {
-        getGroupBios(memberid, accesstoken, groupBios, result.meta.next)
-        console.log('requesting next group bio...')
-      } else {
-        addGroupBios(memberid, groupBios.join('||'))
       }
     })
 } // End getGroupBios
@@ -1551,11 +1551,11 @@ function getBios (url, accesstoken) {
               .pluck('memberid')
               .whereNull('meetupgroupbios')
               .then(function (members) {
-                members.forEach(function (e, i) {
-                  setTimeout((function (x) {
-                    return function () { getGroupBios(e, accesstoken, []) }
-                  })(i), 10000 * i)
-                })
+                // members.forEach(function (e, i) {
+                //   setTimeout((function (x) {
+                //     return function () { getGroupBios(e, accesstoken, []) }
+                //   })(i), 10000 * i)
+                // })
                 // setTimeout(searchCompanies(), 10000 * members.length)
               })
               .catch(function (err) { console.error(err) })
