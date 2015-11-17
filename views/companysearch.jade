@@ -3,10 +3,9 @@ extends layout
 block content
   include ./partials/_company-scripts.jade
   include ./partials/_dashboard-nav.jade
-  include ./partials/_newgroup.jade
   .container
     .row
-      .col-md-8.col-md-offset-1
+      .col-md-8.col-md-offset-1.searchingcompany
         if saved
           h3 Searching #{companyname}
           a.btn.btn-default(href="/remove/#{companyname}") Remove company
@@ -19,3 +18,5 @@ block content
           h3.colortemp Searching #{companyname}
           a.btn.btn-default(href="/save/#{companyname}") Save company
         .backbone
+  .preloader
+    span.preloader-gif

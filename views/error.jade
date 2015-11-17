@@ -1,6 +1,7 @@
 extends layout
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
+  include ./partials/_landing-nav.jade
+    h1= message
+    h2= error.status
+    pre #{error.stack}
