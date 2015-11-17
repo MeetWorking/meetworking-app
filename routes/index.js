@@ -91,6 +91,7 @@ router.post('/signup', function (req, res, next) {
   // variables for whole scope
   var memberid = req.user.memberid
   var accesstoken = req.user.accesstoken
+  console.log('accesstoken: ', accesstoken)
   var form = req.body
   var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
 
@@ -110,7 +111,7 @@ router.post('/signup', function (req, res, next) {
       addCompany(memberid, e)
     }
   })
-
+  console.log('getting group bios for: $1, $2', memberid, accesstoken)
   // Get all group bios for a member
   getGroupBios(memberid, accesstoken, [])
 
@@ -755,6 +756,7 @@ function addCompany (memberid, searchcompany) {
  */
 function getGroupBios (memberid, accesstoken, groupBios, url) {
   var resulturl = url || 'https://api.meetup.com/2/profiles?&sign=true&format=json&photo-host=public&member_id=' + memberid + '&page=100&access_token=' + accesstoken
+  console.log('resulturl: ', resulturl)
   request(resulturl,
     function (error, response, body) {
       if (!error && response.statusCode === 200) {

@@ -170,7 +170,7 @@ passport.use(new MeetupStrategy({
             .then(function () {
               knex.select().from('members').where('memberid', profile.id)
                 .then(function (res) {
-                  return done(null, result[0])
+                  return done(null, res[0])
                 }).catch(function (err) { console.log(err) })
             })
             .catch(function (err) { console.log(err) })
