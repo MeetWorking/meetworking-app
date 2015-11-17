@@ -43,6 +43,7 @@ var SearchResultModel = Backbone.Model.extend({
           error: function (model, jqXHR) {
             if (jqXHR.status === 403) {
               console.log('error updating model')
+              console.log('model.get(eventid): ', model.get('eventid'))
               window.location = '/joinerror/' + model.get('groupurlname')
             } else {
               console.log('Some other error, %s, happened :-(', jqXHR.status + '')
@@ -60,6 +61,7 @@ var SearchResultModel = Backbone.Model.extend({
           error: function (model, jqXHR) {
             if (jqXHR.status === 403) {
               console.log('error updating model')
+              console.log('model.get(eventid): ', model.get('eventid'))
               window.location = '/joinerror/' + model.get('groupurlname')
             } else {
               console.log('Some other error happened :-(')

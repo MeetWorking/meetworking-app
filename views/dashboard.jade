@@ -3,12 +3,11 @@ extends layout
 block content
   include ./partials/_scripts.jade
   include ./partials/_dashboard-nav.jade
-  include ./partials/_newgroup.jade
   .container
     .row
       .col-md-8.col-md-offset-1
         if !companies[0]
-          h2 You haven't chosen any companies to follow yet. Try searching companies above.
+          h2.searchingcompany You haven't chosen any companies to follow yet. Try searching companies above.
         .backbone
       .col-md-3
         #sidebar(data-spy="affix" data-offset-top="0" data-offset-bottom="200")
