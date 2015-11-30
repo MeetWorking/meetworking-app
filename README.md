@@ -2,7 +2,7 @@
 
 Looking for an elusive job in tech? Lost in the sea of Meetups? Meetworking helps you target up to three companies, showing you the Meetups those employees are attending as well as the events held at that company's location—a quick way to get your foot in the door. See talking points for each attendee and RSVP right through the app.
 
-![Example dashboard of Meetworking](/Meetworking/meetworking-app/raw/master/public/wiki/dash.png)
+![Example dashboard of Meetworking](public/wiki/dash.png)
 
 Meetworking uses the SNOB X (pronounced "Snob ten" ;) ) stack: MySQL, Node, Backbone and Express. It relies heavily on the wonderful tools of Knex, Passport, Bluebird, Jade and Jasmine.
 
