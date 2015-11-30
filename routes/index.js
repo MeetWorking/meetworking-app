@@ -91,7 +91,6 @@ router.post('/signup', function (req, res, next) {
   // variables for whole scope
   var memberid = req.user.memberid
   var accesstoken = req.user.accesstoken
-  console.log('accesstoken: ', accesstoken)
   var form = req.body
   var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
 
@@ -111,7 +110,6 @@ router.post('/signup', function (req, res, next) {
       addCompany(memberid, e)
     }
   })
-  console.log('getting group bios for: $1, $2', memberid, accesstoken)
   // Get all group bios for a member
   getGroupBios(memberid, accesstoken, [])
 
@@ -281,7 +279,6 @@ router.get('/company/:name', function (req, res, next) {
           searchcompany: companyname
         })
         .then(function (result) {
-          console.log('got a result: ', result)
           if (!result[0]) {
             knex('searches')
               .where({
@@ -373,13 +370,11 @@ router.get('/company/:name/results', function (req, res, next) {
               if (result1.length === 0) {
                 res.render('noresults')
               } else {
-                console.log('sending: ', result1)
                 res.send(result1)
               }
             })
         })
     })
-  console.log(companyname)
   // Search the company
   // Send models to backbone
 })
@@ -474,7 +469,6 @@ router.post('/settings', function (req, res, next) {
   var accesstoken = req.user.accesstoken
   var form = req.body
   var companies = [form.searchcompany1, form.searchcompany2, form.searchcompany3]
-  console.log('companies are now: ', companies)
 
   // Update members table with profile data
   // NOTE: The company parameter is used to test if a user has signed up or not.
@@ -495,9 +489,7 @@ router.post('/settings', function (req, res, next) {
     })
     .then(function (dbcompanies) {
       var newcomp = _.difference(companies, dbcompanies)
-      console.log('newcomp: ', newcomp)
       var oldcomp = _.difference(dbcompanies, companies)
-      console.log('oldcomp: ', oldcomp)
       knex('searches')
         .whereIn('searchcompany', oldcomp)
         .del()
@@ -565,7 +557,6 @@ router.get('/eventrsvps/:eventid/results', function (req, res, next) {
           memberid: req.user.memberid
         })
         .then(function (searchcompanies) {
-          console.log('searchcompanies: ', searchcompanies)
           var length = results.length
           if (length === 0) {
             res.send()
@@ -657,7 +648,6 @@ router.get('/eventrsvps/:eventid/singleevent', function (req, res, next) {
               result1.forEach(function (elem, ind) {
                 elem.companies = companies
               })
-              console.log('result1[0]: ', result1[0])
               res.send(result1)
             })
         })
@@ -756,7 +746,6 @@ function addCompany (memberid, searchcompany) {
  */
 function getGroupBios (memberid, accesstoken, groupBios, url) {
   var resulturl = url || 'https://api.meetup.com/2/profiles?&sign=true&format=json&photo-host=public&member_id=' + memberid + '&page=100&access_token=' + accesstoken
-  console.log('resulturl: ', resulturl)
   request(resulturl,
     function (error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -871,7 +860,6 @@ function getVenues (companies, memberid, accesstoken, companysearch) {
 function getEvents (urls, tempevents, memberid, accesstoken, companysearch) {
   console.log('getEvents')
   var urllength = urls.length
-  console.log(urls)
   urls.forEach(function (element) {
     request(element, function (error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -881,7 +869,6 @@ function getEvents (urls, tempevents, memberid, accesstoken, companysearch) {
         }
   // Build an object from each result
         var i = result.results.length
-        console.log('total length: ', i)
         if (i === 0 && urllength === 0) {
   // Once all loops are finished, add tempevents
           var finaltempevents = _.uniq(tempevents, 'eventid')
@@ -1042,7 +1029,6 @@ function searchCompanies (memberid, companysearch) {
                   return e.type === 'perm'
                 })
               }
-              console.log('filtered result in searchCompanies: ', result)
               var companymatches = []
               var membersearch = result
               var i = result.length
@@ -1086,7 +1072,6 @@ function searchCompanies (memberid, companysearch) {
  */
 function addTempCompanyMatches (memberid, tempcompanymatches, membersearch) {
   console.log('addTempCompanyMatches')
-  console.log('adding temp company matches: ', tempcompanymatches)
   var rsvpmatches = []
   knex('tempcompanymatches' + memberid)
     .insert(tempcompanymatches)
